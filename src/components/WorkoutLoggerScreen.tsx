@@ -1054,110 +1054,151 @@ export function WorkoutLoggerScreen({
                 </TouchableOpacity>
               </View>
 
-              {/* Agrupación en Entrada en Calor vs Bloque Principal */}
+              {/* Agrupación en Entrada en Calor vs Bloque Principal mediante Segmentos Visuales */}
               {day.exercises.some((e) => e.blockType === 'warmup') && (
-                <View style={styles.previewSectionTag}>
-                  <Text style={styles.previewSectionTagText}>🔥 BLOQUE 1: ENTRADA EN CALOR & MOVILIDAD</Text>
+                <View style={styles.previewSegmentBoxWarmup}>
+                  <View style={styles.previewSegmentHeader}>
+                    <View style={styles.previewSegmentBadgeWarmup}>
+                      <Text style={styles.previewSegmentBadgeWarmupText}>APARTADO 1</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.previewSegmentTitleWarmup}>
+                        🔥 ENTRADA EN CALOR & MOVILIDAD
+                      </Text>
+                      <Text style={styles.previewSegmentSub}>
+                        Movilidad articular y activación neuromotriz previa a la carga
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.segmentInnerDivider} />
+
+                  {day.exercises
+                    .filter((e) => e.blockType === 'warmup')
+                    .map((ex) => {
+                      const lastTopSet = ex.lastSessionSets?.[ex.lastSessionSets.length - 1];
+                      return (
+                        <View key={ex.exerciseId} style={styles.dayExItem}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.dayExName}>
+                              {ex.order}. {ex.exerciseName}
+                            </Text>
+                            <Text style={styles.dayExPrescription}>
+                              {ex.targetSets} series de {ex.targetReps} reps · Pausa {ex.restSeconds}s
+                            </Text>
+                            {ex.coachNotes ? (
+                              <Text style={styles.dayExNotes}>📌 {ex.coachNotes}</Text>
+                            ) : null}
+                          </View>
+
+                          <View style={styles.previewRightActions}>
+                            <TouchableOpacity
+                              style={styles.miniVideoBtn}
+                              onPress={() => openVideoGuide(ex)}
+                            >
+                              <Text style={styles.miniVideoBtnText}>🎥 Técnica</Text>
+                            </TouchableOpacity>
+
+                            {lastTopSet ? (
+                              <View style={styles.lastPerfTag}>
+                                <Text style={styles.lastPerfLabel}>Última marca</Text>
+                                <Text style={styles.lastPerfValue}>
+                                  {lastTopSet.weight}kg × {lastTopSet.reps}
+                                </Text>
+                              </View>
+                            ) : (
+                              <View style={styles.lastPerfTag}>
+                                <Text style={styles.lastPerfLabel}>Nuevo</Text>
+                                <Text style={styles.lastPerfValue}>Estreno</Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      );
+                    })}
                 </View>
               )}
-              {day.exercises
-                .filter((e) => e.blockType === 'warmup')
-                .map((ex) => {
-                  const lastTopSet = ex.lastSessionSets?.[ex.lastSessionSets.length - 1];
-                  return (
-                    <View key={ex.exerciseId} style={styles.dayExItem}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.dayExName}>
-                          {ex.order}. {ex.exerciseName}
-                        </Text>
-                        <Text style={styles.dayExPrescription}>
-                          {ex.targetSets} series de {ex.targetReps} reps · Pausa {ex.restSeconds}s
-                        </Text>
-                        {ex.coachNotes ? (
-                          <Text style={styles.dayExNotes}>📌 {ex.coachNotes}</Text>
-                        ) : null}
-                      </View>
 
-                      <View style={styles.previewRightActions}>
-                        <TouchableOpacity
-                          style={styles.miniVideoBtn}
-                          onPress={() => openVideoGuide(ex)}
-                        >
-                          <Text style={styles.miniVideoBtnText}>🎥 Técnica</Text>
-                        </TouchableOpacity>
-
-                        {lastTopSet ? (
-                          <View style={styles.lastPerfTag}>
-                            <Text style={styles.lastPerfLabel}>Última marca</Text>
-                            <Text style={styles.lastPerfValue}>
-                              {lastTopSet.weight}kg × {lastTopSet.reps}
-                            </Text>
-                          </View>
-                        ) : (
-                          <View style={styles.lastPerfTag}>
-                            <Text style={styles.lastPerfLabel}>Nuevo</Text>
-                            <Text style={styles.lastPerfValue}>Estreno</Text>
-                          </View>
-                        )}
-                      </View>
+              {/* LÍNEA DIVISORIA ESTRUCTURAL ENTRE APARTADOS */}
+              {day.exercises.some((e) => e.blockType === 'warmup') &&
+                day.exercises.some((e) => e.blockType !== 'warmup') && (
+                  <View style={styles.structuralDividerRow}>
+                    <View style={styles.structuralDividerLine} />
+                    <View style={styles.structuralDividerPill}>
+                      <Text style={styles.structuralDividerText}>PASO A FUERZA PRINCIPAL ➔</Text>
                     </View>
-                  );
-                })}
+                    <View style={styles.structuralDividerLine} />
+                  </View>
+                )}
 
+              {/* APARTADO 2: BLOQUE PRINCIPAL DE CARGA */}
               {day.exercises.some((e) => e.blockType !== 'warmup') && (
-                <View style={[styles.previewSectionTag, { marginTop: 14 }]}>
-                  <Text style={[styles.previewSectionTagText, { color: primaryColor }]}>
-                    ⚡ BLOQUE 2: CARGA PRINCIPAL & FUERZA
-                  </Text>
+                <View style={[styles.previewSegmentBoxMain, { borderLeftColor: primaryColor }]}>
+                  <View style={styles.previewSegmentHeader}>
+                    <View style={[styles.previewSegmentBadgeWarmup, { backgroundColor: '#431407', borderColor: primaryColor }]}>
+                      <Text style={[styles.previewSegmentBadgeWarmupText, { color: primaryColor }]}>APARTADO 2</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.previewSegmentTitleWarmup, { color: primaryColor }]}>
+                        ⚡ BLOQUE PRINCIPAL DE CARGA
+                      </Text>
+                      <Text style={styles.previewSegmentSub}>
+                        Fuerza, hipertrofia y control de esfuerzo con semáforo RPE/RIR
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.segmentInnerDivider, { backgroundColor: primaryColor }]} />
+
+                  {day.exercises
+                    .filter((e) => e.blockType !== 'warmup')
+                    .map((ex) => {
+                      const lastTopSet = ex.lastSessionSets?.[ex.lastSessionSets.length - 1];
+                      const traffic = getRpeTraffic(ex.targetRpe);
+                      return (
+                        <View key={ex.exerciseId} style={styles.dayExItem}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.dayExName}>
+                              {ex.order}. {ex.exerciseName}
+                            </Text>
+                            <Text style={styles.dayExPrescription}>
+                              {ex.targetSets} series de {ex.targetReps} reps · Pausa {ex.restSeconds}s · Objetivo:{' '}
+                              <Text style={{ color: traffic.textColor, fontWeight: '800' }}>
+                                RIR {ex.targetRir ?? Math.max(0, 10 - ex.targetRpe)} (RPE {ex.targetRpe})
+                              </Text>
+                            </Text>
+                            {ex.coachNotes ? (
+                              <Text style={styles.dayExNotes}>📌 {ex.coachNotes}</Text>
+                            ) : null}
+                          </View>
+
+                          <View style={styles.previewRightActions}>
+                            <TouchableOpacity
+                              style={styles.miniVideoBtn}
+                              onPress={() => openVideoGuide(ex)}
+                            >
+                              <Text style={styles.miniVideoBtnText}>🎥 Técnica</Text>
+                            </TouchableOpacity>
+
+                            {lastTopSet ? (
+                              <View style={styles.lastPerfTag}>
+                                <Text style={styles.lastPerfLabel}>Última marca</Text>
+                                <Text style={styles.lastPerfValue}>
+                                  {lastTopSet.weight}kg × {lastTopSet.reps}
+                                </Text>
+                              </View>
+                            ) : (
+                              <View style={styles.lastPerfTag}>
+                                <Text style={styles.lastPerfLabel}>Nuevo</Text>
+                                <Text style={styles.lastPerfValue}>Estreno</Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      );
+                    })}
                 </View>
               )}
-              {day.exercises
-                .filter((e) => e.blockType !== 'warmup')
-                .map((ex) => {
-                  const lastTopSet = ex.lastSessionSets?.[ex.lastSessionSets.length - 1];
-                  const traffic = getRpeTraffic(ex.targetRpe);
-                  return (
-                    <View key={ex.exerciseId} style={styles.dayExItem}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.dayExName}>
-                          {ex.order}. {ex.exerciseName}
-                        </Text>
-                        <Text style={styles.dayExPrescription}>
-                          {ex.targetSets} series de {ex.targetReps} reps · Pausa {ex.restSeconds}s · Objetivo:{' '}
-                          <Text style={{ color: traffic.textColor, fontWeight: '800' }}>
-                            RIR {ex.targetRir ?? Math.max(0, 10 - ex.targetRpe)} (RPE {ex.targetRpe})
-                          </Text>
-                        </Text>
-                        {ex.coachNotes ? (
-                          <Text style={styles.dayExNotes}>📌 {ex.coachNotes}</Text>
-                        ) : null}
-                      </View>
-
-                      <View style={styles.previewRightActions}>
-                        <TouchableOpacity
-                          style={styles.miniVideoBtn}
-                          onPress={() => openVideoGuide(ex)}
-                        >
-                          <Text style={styles.miniVideoBtnText}>🎥 Técnica</Text>
-                        </TouchableOpacity>
-
-                        {lastTopSet ? (
-                          <View style={styles.lastPerfTag}>
-                            <Text style={styles.lastPerfLabel}>Última marca</Text>
-                            <Text style={styles.lastPerfValue}>
-                              {lastTopSet.weight}kg × {lastTopSet.reps}
-                            </Text>
-                          </View>
-                        ) : (
-                          <View style={styles.lastPerfTag}>
-                            <Text style={styles.lastPerfLabel}>Nuevo</Text>
-                            <Text style={styles.lastPerfValue}>Estreno</Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                  );
-                })}
             </View>
           ))
         )}
@@ -1264,63 +1305,87 @@ export function WorkoutLoggerScreen({
           </View>
         </TouchableOpacity>
 
-        {/* 1. Bloque de Entrada en Calor & Movilidad (si existe en la rutina) */}
+        {/* 1. APARTADO 1: ENTRADA EN CALOR & MOVILIDAD */}
         {activeWorkout.exercises.some((e) => e.blockType === 'warmup') && (
-          <View style={styles.blockSectionHeader}>
-            <View style={styles.blockIconWarmup}>
-              <Text style={styles.blockSectionEmoji}>🔥</Text>
+          <View style={styles.workoutSegmentBlockWarmup}>
+            <View style={styles.workoutSegmentHeader}>
+              <View style={styles.previewSegmentBadgeWarmup}>
+                <Text style={styles.previewSegmentBadgeWarmupText}>APARTADO 1</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.workoutSegmentTitleWarmup}>
+                  🔥 ENTRADA EN CALOR & MOVILIDAD
+                </Text>
+                <Text style={styles.workoutSegmentSubtitle}>
+                  Series preparatorias y movilidad articular antes de la sobrecarga
+                </Text>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.blockSectionTitle}>BLOQUE 1: ENTRADA EN CALOR & MOVILIDAD</Text>
-              <Text style={styles.blockSectionSubtitle}>
-                Activación y movilidad articular previa indicada por los profesores
-              </Text>
-            </View>
+            <View style={styles.segmentInnerDivider} />
+
+            {activeWorkout.exercises.map((ex, idx) => {
+              if (ex.blockType !== 'warmup') return null;
+              return (
+                <ExerciseCard
+                  key={ex.exerciseId}
+                  exercise={ex}
+                  exerciseIndex={idx}
+                  primaryColor={primaryColor}
+                  onOpenVideo={openVideoGuide}
+                  onOpenSubstitute={openSubstituteModal}
+                />
+              );
+            })}
           </View>
         )}
 
-        {activeWorkout.exercises.map((ex, idx) => {
-          if (ex.blockType !== 'warmup') return null;
-          return (
-            <ExerciseCard
-              key={ex.exerciseId}
-              exercise={ex}
-              exerciseIndex={idx}
-              primaryColor={primaryColor}
-              onOpenVideo={openVideoGuide}
-              onOpenSubstitute={openSubstituteModal}
-            />
-          );
-        })}
+        {/* LÍNEA DIVISORIA ESTRUCTURAL ENTRE APARTADOS */}
+        {activeWorkout.exercises.some((e) => e.blockType === 'warmup') &&
+          activeWorkout.exercises.some((e) => e.blockType !== 'warmup') && (
+            <View style={styles.structuralDividerRowWorkout}>
+              <View style={styles.structuralDividerLine} />
+              <View style={styles.structuralDividerPillWorkout}>
+                <Text style={styles.structuralDividerTextWorkout}>
+                  ⚡ FIN DE ENTRADA EN CALOR · PASO A CARGA PRINCIPAL
+                </Text>
+              </View>
+              <View style={styles.structuralDividerLine} />
+            </View>
+          )}
 
-        {/* 2. Bloque Principal de Carga y Fuerza */}
+        {/* 2. APARTADO 2: BLOQUE PRINCIPAL DE CARGA */}
         {activeWorkout.exercises.some((e) => e.blockType !== 'warmup') && (
-          <View style={[styles.blockSectionHeader, { marginTop: 24 }]}>
-            <View style={[styles.blockIconWarmup, { backgroundColor: primaryColor }]}>
-              <Text style={styles.blockSectionEmoji}>⚡</Text>
+          <View style={[styles.workoutSegmentBlockMain, { borderLeftColor: primaryColor }]}>
+            <View style={styles.workoutSegmentHeader}>
+              <View style={[styles.previewSegmentBadgeWarmup, { backgroundColor: '#431407', borderColor: primaryColor }]}>
+                <Text style={[styles.previewSegmentBadgeWarmupText, { color: primaryColor }]}>APARTADO 2</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.workoutSegmentTitleWarmup, { color: primaryColor }]}>
+                  ⚡ BLOQUE PRINCIPAL DE CARGA
+                </Text>
+                <Text style={styles.workoutSegmentSubtitle}>
+                  Series efectivas de sobrecarga · Anota pesos y califica el esfuerzo con el semáforo RPE
+                </Text>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.blockSectionTitle}>BLOQUE 2: CARGA PRINCIPAL & FUERZA</Text>
-              <Text style={styles.blockSectionSubtitle}>
-                Series efectivas · Registra tus marcas y califica el esfuerzo con el semáforo RPE
-              </Text>
-            </View>
+            <View style={[styles.segmentInnerDivider, { backgroundColor: primaryColor }]} />
+
+            {activeWorkout.exercises.map((ex, idx) => {
+              if (ex.blockType === 'warmup') return null;
+              return (
+                <ExerciseCard
+                  key={ex.exerciseId}
+                  exercise={ex}
+                  exerciseIndex={idx}
+                  primaryColor={primaryColor}
+                  onOpenVideo={openVideoGuide}
+                  onOpenSubstitute={openSubstituteModal}
+                />
+              );
+            })}
           </View>
         )}
-
-        {activeWorkout.exercises.map((ex, idx) => {
-          if (ex.blockType === 'warmup') return null;
-          return (
-            <ExerciseCard
-              key={ex.exerciseId}
-              exercise={ex}
-              exerciseIndex={idx}
-              primaryColor={primaryColor}
-              onOpenVideo={openVideoGuide}
-              onOpenSubstitute={openSubstituteModal}
-            />
-          );
-        })}
       </ScrollView>
 
       {/* Temporizador de Descanso Flotante */}
@@ -2370,5 +2435,143 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 11,
     marginTop: 1,
+  },
+  previewSegmentBoxWarmup: {
+    backgroundColor: '#0D131F',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1E293D',
+    borderLeftWidth: 4,
+    borderLeftColor: '#F59E0B',
+    padding: 14,
+    marginBottom: 10,
+  },
+  previewSegmentBoxMain: {
+    backgroundColor: '#0D131F',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1E293D',
+    borderLeftWidth: 4,
+    borderLeftColor: '#F97316',
+    padding: 14,
+    marginBottom: 10,
+  },
+  previewSegmentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  previewSegmentBadgeWarmup: {
+    backgroundColor: '#451A03',
+    borderColor: '#F59E0B',
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  previewSegmentBadgeWarmupText: {
+    color: '#FDE047',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  previewSegmentTitleWarmup: {
+    color: '#F8FAFC',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  previewSegmentSub: {
+    color: '#94A3B8',
+    fontSize: 11,
+    marginTop: 1,
+  },
+  segmentInnerDivider: {
+    height: 1,
+    backgroundColor: '#1E293D',
+    marginVertical: 10,
+  },
+  structuralDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginVertical: 12,
+  },
+  structuralDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#1E293D',
+  },
+  structuralDividerPill: {
+    backgroundColor: '#131A26',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1E293D',
+  },
+  structuralDividerText: {
+    color: '#64748B',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  workoutSegmentBlockWarmup: {
+    backgroundColor: '#0A0E17',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#1E293D',
+    borderLeftWidth: 4,
+    borderLeftColor: '#F59E0B',
+    padding: 14,
+    marginBottom: 16,
+  },
+  workoutSegmentBlockMain: {
+    backgroundColor: '#0A0E17',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#1E293D',
+    borderLeftWidth: 4,
+    borderLeftColor: '#F97316',
+    padding: 14,
+    marginBottom: 16,
+  },
+  workoutSegmentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 6,
+  },
+  workoutSegmentTitleWarmup: {
+    color: '#F8FAFC',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  workoutSegmentSubtitle: {
+    color: '#94A3B8',
+    fontSize: 11,
+    marginTop: 2,
+  },
+  structuralDividerRowWorkout: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginVertical: 18,
+  },
+  structuralDividerPillWorkout: {
+    backgroundColor: '#131A26',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  structuralDividerTextWorkout: {
+    color: '#CBD5E1',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
   },
 });
