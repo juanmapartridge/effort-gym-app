@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // REGLAS LEAN MVP ($0 COSTO - COMPATIBLE CON FIREBASE SPARK GRATUITO)
+    // =========================================================================
+    // Nota: Para evitar requerir Cloud Functions (Plan Blaze pago) en la Fase 1,
+    // consultamos el perfil del usuario en /users/$(request.auth.uid).
+    // Si más adelante escalas y usas Custom Claims, puedes leer request.auth.token.gymId.
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function currentUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function belongsToGym(gymId) {
+      return isAuthenticated() && (
+        request.auth.token.gymId == gymId ||
+        currentUserDoc().gymId == gymId
+      );
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && (
+        request.auth.token.role == role ||
+        currentUserDoc().role == role
+      );
+    }
+
+    function isCoachOrAdmin(gymId) {
+      return belongsToGym(gymId) && (hasRole('coach') || hasRole('admin'));
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 1. GIMNASIOS (Tenants)
+    match /gyms/{gymId} {
+      allow read: if belongsToGym(gymId);
+      allow write: if belongsToGym(gymId) && hasRole('admin');
+    }
+
+    // 2. USUARIOS (Atletas, Profesores y Admins)
+    match /users/{userId} {
+      allow read: if isOwner(userId) || belongsToGym(resource.data.gymId);
+      allow create: if isAuthenticated() && (isOwner(userId) || isCoachOrAdmin(request.resource.data.gymId));
+      allow update: if belongsToGym(resource.data.gymId)
+                    && request.resource.data.gymId == resource.data.gymId
+                    && (isOwner(userId) || isCoachOrAdmin(resource.data.gymId));
+    }
+
+    // 3. PLANTILLAS DE RUTINAS (Creadas por el Profesor)
+    match /routine_templates/{templateId} {
+      allow read: if belongsToGym(resource.data.gymId);
+      allow create: if isCoachOrAdmin(request.resource.data.gymId);
+      allow update, delete: if isCoachOrAdmin(resource.data.gymId);
+    }
+
+    // 4. RUTINAS ASIGNADAS AL ALUMNO (Instancia independiente + lastSessionSets)
+    match /user_routines/{routineId} {
+      allow read: if belongsToGym(resource.data.gymId)
+                  && (isOwner(resource.data.userId) || isCoachOrAdmin(resource.data.gymId));
+      allow create: if isCoachOrAdmin(request.resource.data.gymId);
+      allow update: if belongsToGym(resource.data.gymId)
+                    && request.resource.data.gymId == resource.data.gymId
+                    && (isOwner(resource.data.userId) || isCoachOrAdmin(resource.data.gymId));
+      allow delete: if isCoachOrAdmin(resource.data.gymId);
+    }
+
+    // 5. SESIONES DE ENTRENAMIENTO CONSOLIDADAS (Incluye series, volumen, 1RM y RPE)
+    match /workout_sessions/{sessionId} {
+      allow read: if belongsToGym(resource.data.gymId)
+                  && (isOwner(resource.data.userId) || isCoachOrAdmin(resource.data.gymId));
+      allow create: if belongsToGym(request.resource.data.gymId)
+                    && isOwner(request.resource.data.userId);
+      allow update, delete: if belongsToGym(resource.data.gymId)
+                            && isOwner(resource.data.userId);
+    }
+  }
+}
+

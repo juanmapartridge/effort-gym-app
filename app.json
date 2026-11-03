@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Effort Gym - Monitoreo de Carga y Entrenamiento",
+    "slug": "effort-gym-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0F172A"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
+
