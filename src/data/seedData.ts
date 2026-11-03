@@ -77,7 +77,7 @@ export const SEED_TEMPLATES: RoutineTemplate[] = [
             targetRpe: 8,
             restSeconds: 120,
             coachNotes: 'Bajar controlado en 2 seg. Subir 2.5kg si sientes que podías hacer +2 reps.',
-            videoUrl: 'https://www.youtube.com/results?search_query=press+banco+plano+con+barra+tecnica',
+            videoUrl: 'https://www.youtube.com/watch?v=vcBig73ojpE',
           },
           {
             order: 2,
@@ -89,7 +89,7 @@ export const SEED_TEMPLATES: RoutineTemplate[] = [
             targetRpe: 8,
             restSeconds: 90,
             coachNotes: 'Espalda neutra, tracción firme hacia el abdomen.',
-            videoUrl: 'https://www.youtube.com/results?search_query=remo+con+barra+prono+tecnica',
+            videoUrl: 'https://www.youtube.com/watch?v=kBWAon7ItDw',
           },
           {
             order: 3,
@@ -101,7 +101,7 @@ export const SEED_TEMPLATES: RoutineTemplate[] = [
             targetRpe: 8.5,
             restSeconds: 90,
             coachNotes: 'Rango completo de movimiento controlando escápulas.',
-            videoUrl: 'https://www.youtube.com/results?search_query=press+inclinado+mancuernas+tecnica',
+            videoUrl: 'https://www.youtube.com/watch?v=8iPEnn-ltC8',
           },
           {
             order: 4,
@@ -113,7 +113,7 @@ export const SEED_TEMPLATES: RoutineTemplate[] = [
             targetRpe: 8,
             restSeconds: 60,
             coachNotes: 'Anti-rotación estricta, pausa de 2 seg con brazos extendidos.',
-            videoUrl: 'https://www.youtube.com/results?search_query=pallof+press+con+banda+tecnica',
+            videoUrl: 'https://www.youtube.com/watch?v=5_ihW3yP6q8',
           },
         ],
       },
@@ -131,7 +131,7 @@ export const SEED_TEMPLATES: RoutineTemplate[] = [
             targetRpe: 7,
             restSeconds: 45,
             coachNotes: 'Activación articular previa al bloque de fuerza.',
-            videoUrl: 'https://www.youtube.com/results?search_query=hip+90+90+mobility',
+            videoUrl: 'https://www.youtube.com/watch?v=hJ1fB9r_R38',
           },
           {
             order: 2,
@@ -143,7 +143,7 @@ export const SEED_TEMPLATES: RoutineTemplate[] = [
             targetRpe: 8,
             restSeconds: 150,
             coachNotes: 'Sentadilla profunda manteniendo estabilidad lumbopélvica.',
-            videoUrl: 'https://www.youtube.com/results?search_query=sentadilla+profunda+barra+tecnica',
+            videoUrl: 'https://www.youtube.com/watch?v=gcNh17Ckjgg',
           },
           {
             order: 3,
@@ -155,7 +155,7 @@ export const SEED_TEMPLATES: RoutineTemplate[] = [
             targetRpe: 8,
             restSeconds: 120,
             coachNotes: 'Bisagra de cadera controlada rozando muslos.',
-            videoUrl: 'https://www.youtube.com/results?search_query=peso+muerto+rumano+con+barra+tecnica',
+            videoUrl: 'https://www.youtube.com/watch?v=JCXUYuzwNrM',
           },
           {
             order: 4,
@@ -167,7 +167,7 @@ export const SEED_TEMPLATES: RoutineTemplate[] = [
             targetRpe: 8.5,
             restSeconds: 90,
             coachNotes: 'Pausa isométrica de 1 seg arriba.',
-            videoUrl: 'https://www.youtube.com/results?search_query=hip+thrust+con+barra+tecnica',
+            videoUrl: 'https://www.youtube.com/watch?v=SEdqd1n0cvg',
           },
         ],
       },
@@ -247,7 +247,7 @@ export const SEED_USER_ROUTINES: UserRoutine[] = [
             targetRpe: 8,
             restSeconds: 120,
             coachNotes: 'Bajar controlado en 2 seg. Subir 2.5kg si sientes que podías hacer +2 reps.',
-            videoUrl: 'https://www.youtube.com/results?search_query=press+banco+plano+con+barra+tecnica',
+            videoUrl: 'https://www.youtube.com/watch?v=vcBig73ojpE',
             lastSessionSets: [
               { setNumber: 1, weight: 80, reps: 8, rpe: 7.5 },
               { setNumber: 2, weight: 82.5, reps: 8, rpe: 8 },
@@ -265,7 +265,7 @@ export const SEED_USER_ROUTINES: UserRoutine[] = [
             targetRpe: 8,
             restSeconds: 90,
             coachNotes: 'Espalda neutra, tracción firme hacia el abdomen.',
-            videoUrl: 'https://www.youtube.com/results?search_query=remo+con+barra+prono+tecnica',
+            videoUrl: 'https://www.youtube.com/watch?v=kBWAon7ItDw',
             lastSessionSets: [
               { setNumber: 1, weight: 70, reps: 10, rpe: 7.5 },
               { setNumber: 2, weight: 72.5, reps: 9, rpe: 8 },
@@ -282,7 +282,7 @@ export const SEED_USER_ROUTINES: UserRoutine[] = [
             targetRpe: 8.5,
             restSeconds: 90,
             coachNotes: 'Rango completo de movimiento controlando escápulas.',
-            videoUrl: 'https://www.youtube.com/results?search_query=press+inclinado+mancuernas+tecnica',
+            videoUrl: 'https://www.youtube.com/watch?v=8iPEnn-ltC8',
             lastSessionSets: [
               { setNumber: 1, weight: 30, reps: 12, rpe: 8 },
               { setNumber: 2, weight: 30, reps: 10, rpe: 8.5 },
@@ -299,7 +299,7 @@ export const SEED_USER_ROUTINES: UserRoutine[] = [
             targetRpe: 8,
             restSeconds: 60,
             coachNotes: 'Anti-rotación estricta, pausa de 2 seg con brazos extendidos.',
-            videoUrl: 'https://www.youtube.com/results?search_query=pallof+press+con+banda+tecnica',
+            videoUrl: 'https://www.youtube.com/watch?v=5_ihW3yP6q8',
             lastSessionSets: [
               { setNumber: 1, weight: 15, reps: 15, rpe: 7.5 },
               { setNumber: 2, weight: 15, reps: 15, rpe: 8 },
@@ -322,7 +322,7 @@ export const SEED_USER_ROUTINES: UserRoutine[] = [
             targetRpe: 7,
             restSeconds: 45,
             coachNotes: 'Activación articular previa al bloque de fuerza.',
-            videoUrl: 'https://www.youtube.com/results?search_query=hip+90+90+mobility',
+            videoUrl: 'https://www.youtube.com/watch?v=hJ1fB9r_R38',
             lastSessionSets: [
               { setNumber: 1, weight: 10, reps: 10, rpe: 7 },
               { setNumber: 2, weight: 10, reps: 10, rpe: 7 },
@@ -338,7 +338,7 @@ export const SEED_USER_ROUTINES: UserRoutine[] = [
             targetRpe: 8,
             restSeconds: 150,
             coachNotes: 'Sentadilla profunda manteniendo estabilidad lumbopélvica.',
-            videoUrl: 'https://www.youtube.com/results?search_query=sentadilla+profunda+barra+tecnica',
+            videoUrl: 'https://www.youtube.com/watch?v=gcNh17Ckjgg',
             lastSessionSets: [
               { setNumber: 1, weight: 110, reps: 6, rpe: 7.5 },
               { setNumber: 2, weight: 115, reps: 6, rpe: 8 },
@@ -356,7 +356,7 @@ export const SEED_USER_ROUTINES: UserRoutine[] = [
             targetRpe: 8,
             restSeconds: 120,
             coachNotes: 'Bisagra de cadera controlada rozando muslos.',
-            videoUrl: 'https://www.youtube.com/results?search_query=peso+muerto+rumano+con+barra+tecnica',
+            videoUrl: 'https://www.youtube.com/watch?v=JCXUYuzwNrM',
             lastSessionSets: [
               { setNumber: 1, weight: 95, reps: 10, rpe: 8 },
               { setNumber: 2, weight: 100, reps: 8, rpe: 8.5 },
@@ -373,7 +373,7 @@ export const SEED_USER_ROUTINES: UserRoutine[] = [
             targetRpe: 8.5,
             restSeconds: 90,
             coachNotes: 'Pausa isométrica de 1 seg arriba.',
-            videoUrl: 'https://www.youtube.com/results?search_query=hip+thrust+con+barra+tecnica',
+            videoUrl: 'https://www.youtube.com/watch?v=SEdqd1n0cvg',
             lastSessionSets: [
               { setNumber: 1, weight: 90, reps: 12, rpe: 8 },
               { setNumber: 2, weight: 95, reps: 10, rpe: 8.5 },

@@ -30,6 +30,12 @@ interface VideoModalState {
   videoUrl?: string;
 }
 
+function extractYouTubeId(url?: string): string | null {
+  if (!url) return null;
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+  return match ? match[1] : null;
+}
+
 /**
  * Cronómetro aislado para evitar re-renderizar las tarjetas de ejercicios cada segundo.
  */
@@ -550,71 +556,96 @@ export function WorkoutLoggerScreen({
   };
 
   // Modal compartido de Video / Técnica
-  const renderVideoModal = () => (
-    <Modal
-      visible={videoModal.visible}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setVideoModal((prev) => ({ ...prev, visible: false }))}
-    >
-      <View style={styles.modalBackdrop}>
-        <View style={styles.modalCard}>
-          <View style={styles.modalHeaderRow}>
-            <Text style={[styles.modalCategoryTag, { color: primaryColor }]}>
-              🎥 GUÍA TÉCNICA · {videoModal.muscleGroup}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setVideoModal((prev) => ({ ...prev, visible: false }))}
-            >
-              <Text style={styles.modalCloseIcon}>✕</Text>
-            </TouchableOpacity>
-          </View>
+  const renderVideoModal = () => {
+    const ytId = extractYouTubeId(videoModal.videoUrl);
 
-          <Text style={styles.modalTitle}>{videoModal.exerciseName}</Text>
-
-          {/* Vista previa visual estilo reproductor de video */}
-          <View style={styles.videoPreviewPlaceholder}>
-            <View style={[styles.playCircle, { backgroundColor: primaryColor }]}>
-              <Text style={styles.playIconText}>▶</Text>
+    return (
+      <Modal
+        visible={videoModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setVideoModal((prev) => ({ ...prev, visible: false }))}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeaderRow}>
+              <Text style={[styles.modalCategoryTag, { color: primaryColor }]}>
+                🎥 TÉCNICA · {videoModal.muscleGroup}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setVideoModal((prev) => ({ ...prev, visible: false }))}
+              >
+                <Text style={styles.modalCloseIcon}>✕</Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.videoPreviewText}>
-              Video demostrativo de ejecución técnica
-            </Text>
-            <Text style={styles.videoPreviewSub}>
-              Soporta links directos a YouTube Shorts / Videos del canal de Effort Gym
-            </Text>
-          </View>
 
-          {videoModal.coachNotes ? (
-            <View style={styles.modalCoachBox}>
-              <Text style={styles.modalCoachLabel}>📌 Indicaciones de tu Profesor:</Text>
-              <Text style={styles.modalCoachText}>{videoModal.coachNotes}</Text>
+            <Text style={styles.modalTitle}>{videoModal.exerciseName}</Text>
+
+            {/* Reproductor de Video de Técnica (YouTube) */}
+            {ytId ? (
+              <View style={styles.videoPlayerContainer}>
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${ytId}?rel=0&modestbranding=1`}
+                  style={{
+                    width: '100%',
+                    height: 220,
+                    borderRadius: 8,
+                    border: 'none',
+                    backgroundColor: '#000',
+                  }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title={videoModal.exerciseName}
+                />
+              </View>
+            ) : (
+              <View style={styles.videoPreviewPlaceholder}>
+                <View style={[styles.playCircle, { backgroundColor: primaryColor }]}>
+                  <Text style={styles.playIconText}>▶</Text>
+                </View>
+                <Text style={styles.videoPreviewText}>
+                  Video demostrativo de ejecución técnica
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.videoPlaceholderNote}>
+              <Text style={styles.videoPlaceholderNoteText}>
+                💡 Video demostrativo de referencia. Cuando Gian grabe los videos oficiales de Effort Gym, se conectarán directamente acá.
+              </Text>
             </View>
-          ) : null}
 
-          <View style={styles.modalButtonsRow}>
-            <TouchableOpacity
-              style={styles.modalCancelBtn}
-              onPress={() => setVideoModal((prev) => ({ ...prev, visible: false }))}
-            >
-              <Text style={styles.modalCancelText}>Volver al entreno</Text>
-            </TouchableOpacity>
+            {videoModal.coachNotes ? (
+              <View style={styles.modalCoachBox}>
+                <Text style={styles.modalCoachLabel}>📌 Indicación de Gian:</Text>
+                <Text style={styles.modalCoachText}>{videoModal.coachNotes}</Text>
+              </View>
+            ) : null}
 
-            <TouchableOpacity
-              style={[styles.modalYoutubeBtn, { backgroundColor: '#EF4444' }]}
-              onPress={() => {
-                if (videoModal.videoUrl) {
-                  Linking.openURL(videoModal.videoUrl);
-                }
-              }}
-            >
-              <Text style={styles.modalYoutubeBtnText}>▶ Abrir en YouTube</Text>
-            </TouchableOpacity>
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setVideoModal((prev) => ({ ...prev, visible: false }))}
+              >
+                <Text style={styles.modalCancelText}>Volver al entreno</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalYoutubeBtn, { backgroundColor: '#EF4444' }]}
+                onPress={() => {
+                  if (videoModal.videoUrl) {
+                    Linking.openURL(videoModal.videoUrl);
+                  }
+                }}
+              >
+                <Text style={styles.modalYoutubeBtnText}>▶ Abrir en YouTube</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
-  );
+      </Modal>
+    );
+  };
 
   const openSubstituteModal = (idx: number, ex: LoggedExercise) => {
     setSubstituteModal({
@@ -720,6 +751,13 @@ export function WorkoutLoggerScreen({
     , session.exercises[0]);
 
     const handleShare = () => {
+      const bestText =
+        bestExercise && bestExercise.metrics?.maxWeightKg > 0
+          ? `\n🔥 Top Lift: ${bestExercise.exerciseName} (${bestExercise.metrics.maxWeightKg} kg · 1RM: ${bestExercise.metrics.estimated1RM} kg)`
+          : '';
+      const message = `🏋️‍♂️ ¡Entrenamiento completado en Effort Gym!\n📅 Sesión: ${session.dayName}\n📊 Volumen movido: ${session.totalVolumeKg} kg en ${session.totalCompletedSets} series\n⏱️ Tiempo: ${Math.round(session.durationSeconds / 60)} min${bestText}\n💪 Monitoreo de Carga y Entrenamiento`;
+
+      Linking.openURL(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`);
       setFinishedSummaryModal((prev) => ({ ...prev, copied: true }));
       setTimeout(() => {
         setFinishedSummaryModal((prev) => ({ ...prev, copied: false }));
@@ -1660,6 +1698,25 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: '900',
     marginBottom: 14,
+  },
+  videoPlayerContainer: {
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    marginBottom: 10,
+  },
+  videoPlaceholderNote: {
+    backgroundColor: '#090D14',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#1E293D',
+  },
+  videoPlaceholderNoteText: {
+    color: '#94A3B8',
+    fontSize: 11,
+    lineHeight: 16,
   },
   videoPreviewPlaceholder: {
     backgroundColor: '#0F172A',
