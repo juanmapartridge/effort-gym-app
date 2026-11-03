@@ -49,12 +49,26 @@ export default function App() {
               <View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Text style={styles.gymNameText}>EFFORT GYM</Text>
-                  <View style={styles.badgePro}>
-                    <Text style={styles.badgeProText}>SEGUIMIENTO DE CARGA</Text>
+                  <View
+                    style={[
+                      styles.badgePro,
+                      currentUser.role === 'coach'
+                        ? { backgroundColor: '#7C2D12', borderColor: '#EA580C' }
+                        : { backgroundColor: '#064E3B', borderColor: '#059669' },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.badgeProText,
+                        currentUser.role === 'coach' ? { color: '#FFEDD5' } : { color: '#D1FAE5' },
+                      ]}
+                    >
+                      {currentUser.role === 'coach' ? 'STUDIO DEL ENTRENADOR' : 'APP DEL ATLETA EN SALA'}
+                    </Text>
                   </View>
                 </View>
                 <Text style={styles.tenantSubText}>
-                  {currentUser.displayName} · {currentUser.role === 'athlete' ? 'Atleta en Sala' : 'Profesor / Director'}
+                  {currentUser.displayName} · {currentUser.role === 'athlete' ? 'Atleta en Entrenamiento' : 'Director y Entrenador Principal'}
                 </Text>
               </View>
             </View>
@@ -164,7 +178,7 @@ export default function App() {
                     activeTab === 'coach' && { color: primaryColor, fontWeight: '800' },
                   ]}
                 >
-                  📋 Panel Profe & Alertas
+                  📋 Panel & Planificador Profe
                 </Text>
                 {activeTab === 'coach' && (
                   <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />
@@ -181,7 +195,7 @@ export default function App() {
                     activeTab === 'analytics' && { color: primaryColor, fontWeight: '800' },
                   ]}
                 >
-                  📊 Analítica de Carga
+                  📊 Analítica de Alumnos
                 </Text>
                 {activeTab === 'analytics' && (
                   <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />
@@ -198,7 +212,7 @@ export default function App() {
                     activeTab === 'logger' && { color: primaryColor, fontWeight: '800' },
                   ]}
                 >
-                  🏋️ Probar Logger
+                  🏋️ Vista Previa Alumno (Logger)
                 </Text>
                 {activeTab === 'logger' && (
                   <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />

@@ -83,6 +83,12 @@ interface GymStoreState {
     description: string,
     days: RoutineDay[]
   ) => RoutineTemplate | null;
+  createAndAssignMultiDayTemplate: (
+    name: string,
+    description: string,
+    days: RoutineDay[],
+    athleteId: string
+  ) => UserRoutine | null;
   updateAthleteRoutineExercise: (
     userRoutineId: string,
     dayId: string,
@@ -558,6 +564,12 @@ export const useGymStore = create<GymStoreState>()(
 
         syncTemplateToFirestore(newTemplate);
         return newTemplate;
+      },
+
+      createAndAssignMultiDayTemplate: (name, description, days, athleteId) => {
+        const created = get().createMultiDayTemplate(name, description, days);
+        if (!created) return null;
+        return get().assignTemplateToAthlete(created.id, athleteId);
       },
 
       updateAthleteRoutineExercise: (userRoutineId, dayId, exerciseId, updates) => {
