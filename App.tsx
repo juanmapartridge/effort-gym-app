@@ -11,7 +11,6 @@ import { useGymStore } from './src/store/useGymStore';
 import { WorkoutLoggerScreen } from './src/components/WorkoutLoggerScreen';
 import { AnalyticsChartsScreen } from './src/components/AnalyticsChartsScreen';
 import { CoachDashboardScreen } from './src/components/CoachDashboardScreen';
-import { isFirebaseConfigured } from './src/services/firebase';
 
 type TabKey = 'logger' | 'analytics' | 'coach';
 
@@ -38,108 +37,96 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#0B0F19" />
+      <StatusBar barStyle="light-content" backgroundColor="#090D14" />
 
-      {/* Barra Superior: Identidad Effort Gym + Selector Rápido de Vista */}
+      {/* Barra Superior Minimalista */}
       <View style={styles.topTenantBar}>
         <View style={styles.appContainer}>
           <View style={styles.brandRow}>
             <View style={styles.brandLeft}>
               <View style={[styles.gymColorDot, { backgroundColor: primaryColor }]} />
               <View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={styles.gymNameText}>EFFORT GYM</Text>
-                  <View
-                    style={[
-                      styles.badgePro,
-                      currentUser.role === 'coach'
-                        ? { backgroundColor: '#7C2D12', borderColor: '#EA580C' }
-                        : { backgroundColor: '#064E3B', borderColor: '#059669' },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.badgeProText,
-                        currentUser.role === 'coach' ? { color: '#FFEDD5' } : { color: '#D1FAE5' },
-                      ]}
-                    >
-                      {currentUser.role === 'coach' ? 'STUDIO DEL ENTRENADOR' : 'APP DEL ATLETA EN SALA'}
-                    </Text>
-                  </View>
-                </View>
+                <Text style={styles.gymNameText}>EFFORT GYM</Text>
                 <Text style={styles.tenantSubText}>
-                  {currentUser.displayName} · {currentUser.role === 'athlete' ? 'Atleta en Entrenamiento' : 'Director y Entrenador Principal'}
+                  {currentUser.role === 'coach'
+                    ? 'Director: Gian Boasso'
+                    : `Atleta: ${currentUser.displayName}`}
                 </Text>
               </View>
             </View>
 
             <TouchableOpacity style={styles.resetDemoBtn} onPress={resetDemoData}>
-              <Text style={styles.resetDemoBtnText}>↺ Restaurar Datos</Text>
+              <Text style={styles.resetDemoBtnText}>↺ Restaurar</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Botones para alternar entre Vista Profesor y Alumnos */}
+          {/* Selector de Perfil Sobrio */}
           <View style={styles.demoSwitcherRow}>
-            <Text style={styles.switcherLabel}>Perfil activo:</Text>
             <TouchableOpacity
               style={[
                 styles.profilePill,
-                currentUserId === 'usr_coach_1' && {
-                  borderColor: primaryColor,
-                  backgroundColor: '#1E293B',
-                },
+                currentUserId === 'usr_coach_1' && styles.profilePillActive,
               ]}
               onPress={() =>
                 handleSwitchTenantProfile('gym_effort', 'usr_coach_1', 'coach')
               }
             >
-              <Text style={styles.profilePillText}>
-                👔 Profesor: Gian Boasso
+              <Text
+                style={[
+                  styles.profilePillText,
+                  currentUserId === 'usr_coach_1' && styles.profilePillTextActive,
+                ]}
+              >
+                Profe: Gian Boasso
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.profilePill,
-                currentUserId === 'usr_athlete_1' && {
-                  borderColor: primaryColor,
-                  backgroundColor: '#1E293B',
-                },
+                currentUserId === 'usr_athlete_1' && styles.profilePillActive,
               ]}
               onPress={() =>
                 handleSwitchTenantProfile('gym_effort', 'usr_athlete_1', 'logger')
               }
             >
-              <Text style={styles.profilePillText}>
-                🏃 Alumno: Martín Echeverría
+              <Text
+                style={[
+                  styles.profilePillText,
+                  currentUserId === 'usr_athlete_1' && styles.profilePillTextActive,
+                ]}
+              >
+                Alumno: Martín
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.profilePill,
-                currentUserId === 'usr_athlete_2' && {
-                  borderColor: primaryColor,
-                  backgroundColor: '#1E293B',
-                },
+                currentUserId === 'usr_athlete_2' && styles.profilePillActive,
               ]}
               onPress={() =>
                 handleSwitchTenantProfile('gym_effort', 'usr_athlete_2', 'logger')
               }
             >
-              <Text style={styles.profilePillText}>
-                🏃 Alumna: Sofía Martínez
+              <Text
+                style={[
+                  styles.profilePillText,
+                  currentUserId === 'usr_athlete_2' && styles.profilePillTextActive,
+                ]}
+              >
+                Alumna: Sofía
               </Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
 
-      {/* Banner de confirmación de operaciones */}
+      {/* Banner de confirmación sutil */}
       {lastSavedBanner && (
         <TouchableOpacity style={styles.toastBanner} onPress={clearSavedBanner}>
           <View style={[styles.appContainer, styles.toastInner]}>
-            <Text style={styles.toastText}>✅ {lastSavedBanner}</Text>
+            <Text style={styles.toastText}>✓ {lastSavedBanner}</Text>
             <Text style={styles.toastDismiss}>✕</Text>
           </View>
         </TouchableOpacity>
@@ -163,7 +150,7 @@ export default function App() {
         </View>
       </View>
 
-      {/* Navegación Inferior Clara Responsiva */}
+      {/* Navegación Inferior Limpia */}
       <View style={styles.bottomNav}>
         <View style={[styles.appContainer, styles.bottomNavInner]}>
           {currentUser.role === 'coach' ? (
@@ -178,7 +165,7 @@ export default function App() {
                     activeTab === 'coach' && { color: primaryColor, fontWeight: '800' },
                   ]}
                 >
-                  📋 Panel & Planificador Profe
+                  Panel Profe
                 </Text>
                 {activeTab === 'coach' && (
                   <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />
@@ -195,7 +182,7 @@ export default function App() {
                     activeTab === 'analytics' && { color: primaryColor, fontWeight: '800' },
                   ]}
                 >
-                  📊 Analítica de Alumnos
+                  Gráficos de Carga
                 </Text>
                 {activeTab === 'analytics' && (
                   <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />
@@ -212,7 +199,7 @@ export default function App() {
                     activeTab === 'logger' && { color: primaryColor, fontWeight: '800' },
                   ]}
                 >
-                  🏋️ Vista Previa Alumno (Logger)
+                  Vista Alumno
                 </Text>
                 {activeTab === 'logger' && (
                   <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />
@@ -231,7 +218,7 @@ export default function App() {
                     activeTab === 'logger' && { color: primaryColor, fontWeight: '800' },
                   ]}
                 >
-                  🏋️ Mi Rutina Hoy
+                  Mi Rutina Hoy
                 </Text>
                 {activeTab === 'logger' && (
                   <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />
@@ -248,7 +235,7 @@ export default function App() {
                     activeTab === 'analytics' && { color: primaryColor, fontWeight: '800' },
                   ]}
                 >
-                  📊 Mi Progreso (1RM)
+                  Mi Evolución
                 </Text>
                 {activeTab === 'analytics' && (
                   <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />
@@ -265,7 +252,7 @@ export default function App() {
                     activeTab === 'coach' && { color: primaryColor, fontWeight: '800' },
                   ]}
                 >
-                  📋 Panel Profe
+                  Volver a Profe
                 </Text>
                 {activeTab === 'coach' && (
                   <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />
@@ -282,103 +269,86 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: '#090D14',
   },
   topTenantBar: {
-    backgroundColor: '#111827',
+    backgroundColor: '#131A26',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1F2937',
+    borderBottomColor: '#1E293D',
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   brandLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    flex: 1,
   },
   gymColorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   gymNameText: {
-    color: '#F9FAFB',
+    color: '#F8FAFC',
     fontSize: 16,
     fontWeight: '900',
     letterSpacing: 0.5,
   },
-  badgePro: {
-    backgroundColor: '#7C2D12',
-    borderColor: '#EA580C',
-    borderWidth: 1,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  badgeProText: {
-    color: '#FFEDD5',
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
   tenantSubText: {
-    color: '#9CA3AF',
+    color: '#94A3B8',
     fontSize: 11,
+    marginTop: 1,
   },
   resetDemoBtn: {
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
-    backgroundColor: '#1E293B',
+    backgroundColor: '#0D131F',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#1E293D',
   },
   resetDemoBtnText: {
-    color: '#CBD5E1',
+    color: '#94A3B8',
     fontSize: 11,
     fontWeight: '700',
   },
   demoSwitcherRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
+    gap: 8,
   },
-  switcherLabel: {
+  profilePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#0D131F',
+    borderWidth: 1,
+    borderColor: '#1E293D',
+  },
+  profilePillActive: {
+    backgroundColor: '#1E293D',
+    borderColor: '#334155',
+  },
+  profilePillText: {
     color: '#94A3B8',
     fontSize: 11,
     fontWeight: '700',
-    marginRight: 4,
   },
-  profilePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
-    backgroundColor: '#0F172A',
-    borderWidth: 1,
-    borderColor: '#1E293B',
-  },
-  profilePillText: {
-    color: '#E2E8F0',
-    fontSize: 11,
-    fontWeight: '700',
+  profilePillTextActive: {
+    color: '#F8FAFC',
   },
   toastBanner: {
     backgroundColor: '#064E3B',
     borderBottomWidth: 1,
     borderBottomColor: '#059669',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingVertical: 8,
   },
   toastText: {
     color: '#ECFDF5',
@@ -412,9 +382,9 @@ const styles = StyleSheet.create({
   },
   bottomNav: {
     flexDirection: 'row',
-    backgroundColor: '#111827',
+    backgroundColor: '#131A26',
     borderTopWidth: 1,
-    borderTopColor: '#1F2937',
+    borderTopColor: '#1E293D',
     paddingVertical: 6,
   },
   navTab: {
@@ -425,14 +395,14 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   navTabLabel: {
-    color: '#9CA3AF',
+    color: '#94A3B8',
     fontSize: 12,
     fontWeight: '600',
   },
   navActiveIndicator: {
     height: 3,
-    width: 36,
+    width: 32,
     borderRadius: 2,
-    marginTop: 5,
+    marginTop: 4,
   },
 });
