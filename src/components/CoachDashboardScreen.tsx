@@ -6,13 +6,21 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Linking,
 } from 'react-native';
 import { useGymStore } from '../store/useGymStore';
 import { RoutineDay, RoutineExerciseItem } from '../types/models';
 import { AthleteLoadAnalyticsPanel } from './AnalyticsChartsScreen';
 
 const REP_PRESETS = ['6-8', '8-10', '10-12', '12-15'];
-const REST_PRESETS = [60, 90, 120];
+const REST_PRESETS = [45, 60, 90, 120, 150];
+
+const RIR_TRAFFIC_PRESETS = [
+  { rir: 3, rpe: 7, label: 'RIR 3', sub: 'Leve (RPE 7)', color: '#10B981', bg: '#052E16' },
+  { rir: 2, rpe: 8, label: 'RIR 2', sub: 'Óptimo (RPE 8)', color: '#EAB308', bg: '#451A03' },
+  { rir: 1, rpe: 9, label: 'RIR 1', sub: 'Pesado (RPE 9)', color: '#F97316', bg: '#431407' },
+  { rir: 0, rpe: 10, label: 'RIR 0', sub: 'Fallo (RPE 10)', color: '#EF4444', bg: '#450A0A' },
+];
 
 export function CoachDashboardScreen({ primaryColor }: { primaryColor: string }) {
   const activeGymId = useGymStore((s) => s.activeGymId);
@@ -74,27 +82,44 @@ export function CoachDashboardScreen({ primaryColor }: { primaryColor: string })
   const [builderDays, setBuilderDays] = useState<RoutineDay[]>([
     {
       dayId: 'day_builder_1',
-      name: 'Día 1 - Tren Superior',
+      name: 'Día 1 - Tren Superior & Movilidad',
       exercises: [
         {
           order: 1,
+          exerciseId: 'ex_2841cf7b',
+          exerciseName: 'CHEST ROTATORY CUADRUPEDIA',
+          muscleGroup: 'MOVILIDAD TORACICA',
+          blockType: 'warmup',
+          targetSets: 2,
+          targetReps: '10',
+          targetRpe: 7,
+          targetRir: 3,
+          restSeconds: 45,
+          coachNotes: 'Entrada en calor: rotación fluida abriendo el pecho sin compensar.',
+        },
+        {
+          order: 2,
           exerciseId: 'ex_c1164817',
           exerciseName: 'PRESS BANCO PLANO C/BARRA',
           muscleGroup: 'HEMISFERIO SUPERIOR',
+          blockType: 'main',
           targetSets: 4,
           targetReps: '6-8',
           targetRpe: 8,
+          targetRir: 2,
           restSeconds: 120,
           coachNotes: 'Pausa de 1 segundo en el pecho antes de empujar.',
         },
         {
-          order: 2,
+          order: 3,
           exerciseId: 'ex_4b57ae32',
           exerciseName: 'REMO 90 POLEA C/MANIJA',
           muscleGroup: 'HEMISFERIO SUPERIOR',
+          blockType: 'main',
           targetSets: 3,
           targetReps: '8-10',
           targetRpe: 8,
+          targetRir: 2,
           restSeconds: 90,
           coachNotes: 'Cuidar retracción de escápulas.',
         },
@@ -106,12 +131,27 @@ export function CoachDashboardScreen({ primaryColor }: { primaryColor: string })
       exercises: [
         {
           order: 1,
+          exerciseId: 'ex_2c0ae273',
+          exerciseName: 'HIP 90 - 90',
+          muscleGroup: 'MOVILIDAD CADERA',
+          blockType: 'warmup',
+          targetSets: 2,
+          targetReps: '10',
+          targetRpe: 7,
+          targetRir: 3,
+          restSeconds: 45,
+          coachNotes: 'Entrada en calor: movilidad articular de cadera previa a la carga.',
+        },
+        {
+          order: 2,
           exerciseId: 'ex_032d7308',
           exerciseName: 'HIP THRUST C/BARRA',
           muscleGroup: 'HEMISFERIO INFERIOR',
+          blockType: 'main',
           targetSets: 4,
           targetReps: '8-10',
           targetRpe: 8,
+          targetRir: 2,
           restSeconds: 90,
           coachNotes: 'Apretar glúteos 1 segundo arriba.',
         },
@@ -131,6 +171,8 @@ export function CoachDashboardScreen({ primaryColor }: { primaryColor: string })
   const [editingExerciseKey, setEditingExerciseKey] = useState<string | null>(null);
   const [editSets, setEditSets] = useState('4');
   const [editReps, setEditReps] = useState('6-8');
+  const [editRest, setEditRest] = useState('90');
+  const [editRir, setEditRir] = useState('2');
   const [editNotes, setEditNotes] = useState('');
 
   const activeAthlete =
@@ -186,16 +228,22 @@ export function CoachDashboardScreen({ primaryColor }: { primaryColor: string })
         .filter((e) => e.exerciseId !== exerciseId)
         .map((e, i) => ({ ...e, order: i + 1 }));
     } else {
+      const isWarmup =
+        catEx.muscleGroup.toUpperCase().startsWith('MOVILIDAD') ||
+        catEx.muscleGroup.toUpperCase().includes('LUMBOPELVICA');
+
       const newEx: RoutineExerciseItem = {
         order: currentDay.exercises.length + 1,
         exerciseId: catEx.id,
         exerciseName: catEx.name,
         muscleGroup: catEx.muscleGroup,
-        targetSets: 3,
-        targetReps: '8-10',
-        targetRpe: 8,
-        restSeconds: 90,
-        coachNotes: '',
+        blockType: isWarmup ? 'warmup' : 'main',
+        targetSets: isWarmup ? 2 : 3,
+        targetReps: isWarmup ? '10-12' : '8-10',
+        targetRpe: isWarmup ? 7 : 8,
+        targetRir: isWarmup ? 3 : 2,
+        restSeconds: isWarmup ? 45 : 90,
+        coachNotes: isWarmup ? 'Entrada en calor: activación y movilidad articular.' : '',
       };
       currentDay.exercises = [...currentDay.exercises, newEx];
     }
@@ -206,7 +254,7 @@ export function CoachDashboardScreen({ primaryColor }: { primaryColor: string })
 
   const updateBuilderExerciseField = (
     exIdx: number,
-    field: 'targetSets' | 'targetReps' | 'targetRpe' | 'restSeconds' | 'coachNotes',
+    field: 'targetSets' | 'targetReps' | 'targetRpe' | 'targetRir' | 'restSeconds' | 'blockType' | 'coachNotes',
     val: any
   ) => {
     const updated = [...builderDays];
@@ -218,10 +266,17 @@ export function CoachDashboardScreen({ primaryColor }: { primaryColor: string })
       target.targetSets = Math.max(1, parseInt(String(val), 10) || 1);
     } else if (field === 'targetRpe') {
       target.targetRpe = Math.min(10, Math.max(5, parseFloat(String(val)) || 8));
+      target.targetRir = Math.max(0, 10 - target.targetRpe);
+    } else if (field === 'targetRir') {
+      const rirNum = Math.max(0, parseInt(String(val), 10) || 0);
+      target.targetRir = rirNum;
+      target.targetRpe = Math.max(6, 10 - rirNum);
     } else if (field === 'targetReps') {
       target.targetReps = String(val);
     } else if (field === 'restSeconds') {
-      target.restSeconds = Math.max(30, parseInt(String(val), 10) || 90);
+      target.restSeconds = Math.max(15, parseInt(String(val), 10) || 90);
+    } else if (field === 'blockType') {
+      target.blockType = val;
     } else if (field === 'coachNotes') {
       target.coachNotes = String(val);
     }
@@ -542,97 +597,271 @@ export function CoachDashboardScreen({ primaryColor }: { primaryColor: string })
                     {activeAthleteRoutine.days.map((day) => (
                       <View key={day.dayId} style={styles.dayBoxClean}>
                         <Text style={styles.dayBoxCleanTitle}>{day.name}</Text>
-                        {day.exercises.map((ex) => {
-                          const editKey = `${day.dayId}_${ex.exerciseId}`;
-                          const isEditing = editingExerciseKey === editKey;
 
-                          return (
-                            <View key={ex.exerciseId} style={styles.exerciseRowClean}>
-                              <View style={{ flex: 1 }}>
-                                <Text style={styles.exerciseRowCleanName}>
-                                  {ex.order}. {ex.exerciseName}{' '}
-                                  <Text style={{ color: '#64748B', fontSize: 11 }}>({ex.muscleGroup})</Text>
-                                </Text>
-                                <Text style={styles.exerciseRowCleanSpec}>
-                                  {ex.targetSets} series × {ex.targetReps} reps · RPE {ex.targetRpe}
-                                </Text>
-                                {ex.coachNotes ? (
-                                  <Text style={styles.exerciseRowCleanNote}>
-                                    📌 {ex.coachNotes}
+                        {/* 1. Entrada en Calor & Movilidad */}
+                        {day.exercises.some((e) => e.blockType === 'warmup') && (
+                          <View style={styles.routineSectionSubHeader}>
+                            <Text style={styles.routineSectionSubHeaderText}>
+                              🔥 ENTRADA EN CALOR & MOVILIDAD
+                            </Text>
+                          </View>
+                        )}
+                        {day.exercises
+                          .filter((e) => e.blockType === 'warmup')
+                          .map((ex) => {
+                            const editKey = `${day.dayId}_${ex.exerciseId}`;
+                            const isEditing = editingExerciseKey === editKey;
+
+                            return (
+                              <View key={ex.exerciseId} style={styles.exerciseRowClean}>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={styles.exerciseRowCleanName}>
+                                    {ex.order}. {ex.exerciseName}{' '}
+                                    <Text style={{ color: '#F59E0B', fontSize: 11 }}>[Movilidad]</Text>
                                   </Text>
-                                ) : null}
-                              </View>
-
-                              <TouchableOpacity
-                                style={styles.cleanSmallBtn}
-                                onPress={() => {
-                                  if (isEditing) {
-                                    setEditingExerciseKey(null);
-                                  } else {
-                                    setEditingExerciseKey(editKey);
-                                    setEditSets(String(ex.targetSets));
-                                    setEditReps(ex.targetReps);
-                                    setEditNotes(ex.coachNotes || '');
-                                  }
-                                }}
-                              >
-                                <Text style={styles.cleanSmallBtnText}>
-                                  {isEditing ? 'Cerrar' : 'Ajustar'}
-                                </Text>
-                              </TouchableOpacity>
-
-                              {isEditing && (
-                                <View style={styles.editFormInline}>
-                                  <View style={{ flexDirection: 'row', gap: 10 }}>
-                                    <View style={{ flex: 1 }}>
-                                      <Text style={styles.miniLabel}>Series:</Text>
-                                      <TextInput
-                                        style={styles.cleanInput}
-                                        keyboardType="numeric"
-                                        value={editSets}
-                                        onChangeText={setEditSets}
-                                      />
-                                    </View>
-                                    <View style={{ flex: 1 }}>
-                                      <Text style={styles.miniLabel}>Repeticiones:</Text>
-                                      <TextInput
-                                        style={styles.cleanInput}
-                                        value={editReps}
-                                        onChangeText={setEditReps}
-                                      />
-                                    </View>
-                                  </View>
-                                  <Text style={styles.miniLabel}>Nota para el alumno:</Text>
-                                  <TextInput
-                                    style={styles.cleanInput}
-                                    value={editNotes}
-                                    onChangeText={setEditNotes}
-                                    placeholder="Ej: Cuidar técnica..."
-                                    placeholderTextColor="#64748B"
-                                  />
-                                  <TouchableOpacity
-                                    style={[styles.primaryActionBtn, { backgroundColor: '#10B981', marginTop: 4 }]}
-                                    onPress={() => {
-                                      updateAthleteRoutineExercise(
-                                        activeAthleteRoutine.id,
-                                        day.dayId,
-                                        ex.exerciseId,
-                                        {
-                                          targetSets: parseInt(editSets, 10) || ex.targetSets,
-                                          targetReps: editReps.trim() || ex.targetReps,
-                                          coachNotes: editNotes.trim(),
-                                        }
-                                      );
-                                      setEditingExerciseKey(null);
-                                    }}
-                                  >
-                                    <Text style={styles.primaryActionBtnText}>Guardar Ajuste</Text>
-                                  </TouchableOpacity>
+                                  <Text style={styles.exerciseRowCleanSpec}>
+                                    {ex.targetSets} series × {ex.targetReps} reps · Pausa {ex.restSeconds}s
+                                  </Text>
+                                  {ex.coachNotes ? (
+                                    <Text style={styles.exerciseRowCleanNote}>
+                                      📌 {ex.coachNotes}
+                                    </Text>
+                                  ) : null}
                                 </View>
-                              )}
-                            </View>
-                          );
-                        })}
+
+                                <TouchableOpacity
+                                  style={styles.cleanSmallBtn}
+                                  onPress={() => {
+                                    if (isEditing) {
+                                      setEditingExerciseKey(null);
+                                    } else {
+                                      setEditingExerciseKey(editKey);
+                                      setEditSets(String(ex.targetSets));
+                                      setEditReps(ex.targetReps);
+                                      setEditRest(String(ex.restSeconds || 45));
+                                      setEditRir(String(ex.targetRir ?? 3));
+                                      setEditNotes(ex.coachNotes || '');
+                                    }
+                                  }}
+                                >
+                                  <Text style={styles.cleanSmallBtnText}>
+                                    {isEditing ? 'Cerrar' : 'Ajustar'}
+                                  </Text>
+                                </TouchableOpacity>
+
+                                {isEditing && (
+                                  <View style={styles.editFormInline}>
+                                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                                      <View style={{ flex: 1 }}>
+                                        <Text style={styles.miniLabel}>Series:</Text>
+                                        <TextInput
+                                          style={styles.cleanInput}
+                                          keyboardType="numeric"
+                                          value={editSets}
+                                          onChangeText={setEditSets}
+                                        />
+                                      </View>
+                                      <View style={{ flex: 1 }}>
+                                        <Text style={styles.miniLabel}>Reps:</Text>
+                                        <TextInput
+                                          style={styles.cleanInput}
+                                          value={editReps}
+                                          onChangeText={setEditReps}
+                                        />
+                                      </View>
+                                      <View style={{ flex: 1 }}>
+                                        <Text style={styles.miniLabel}>Pausa (s):</Text>
+                                        <TextInput
+                                          style={styles.cleanInput}
+                                          keyboardType="numeric"
+                                          value={editRest}
+                                          onChangeText={setEditRest}
+                                        />
+                                      </View>
+                                    </View>
+                                    <Text style={styles.miniLabel}>Nota para el alumno:</Text>
+                                    <TextInput
+                                      style={styles.cleanInput}
+                                      value={editNotes}
+                                      onChangeText={setEditNotes}
+                                      placeholder="Ej: Movilidad articular previa..."
+                                      placeholderTextColor="#64748B"
+                                    />
+                                    <TouchableOpacity
+                                      style={[styles.primaryActionBtn, { backgroundColor: '#10B981', marginTop: 4 }]}
+                                      onPress={() => {
+                                        updateAthleteRoutineExercise(
+                                          activeAthleteRoutine.id,
+                                          day.dayId,
+                                          ex.exerciseId,
+                                          {
+                                            targetSets: parseInt(editSets, 10) || ex.targetSets,
+                                            targetReps: editReps.trim() || ex.targetReps,
+                                            restSeconds: parseInt(editRest, 10) || ex.restSeconds,
+                                            coachNotes: editNotes.trim(),
+                                          }
+                                        );
+                                        setEditingExerciseKey(null);
+                                      }}
+                                    >
+                                      <Text style={styles.primaryActionBtnText}>Guardar Ajuste</Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                )}
+                              </View>
+                            );
+                          })}
+
+                        {/* 2. Bloque Principal de Carga */}
+                        {day.exercises.some((e) => e.blockType !== 'warmup') && (
+                          <View style={[styles.routineSectionSubHeader, { marginTop: 12 }]}>
+                            <Text style={[styles.routineSectionSubHeaderText, { color: primaryColor }]}>
+                              ⚡ BLOQUE PRINCIPAL DE CARGA
+                            </Text>
+                          </View>
+                        )}
+                        {day.exercises
+                          .filter((e) => e.blockType !== 'warmup')
+                          .map((ex) => {
+                            const editKey = `${day.dayId}_${ex.exerciseId}`;
+                            const isEditing = editingExerciseKey === editKey;
+                            const rirVal = ex.targetRir ?? Math.max(0, 10 - ex.targetRpe);
+
+                            return (
+                              <View key={ex.exerciseId} style={styles.exerciseRowClean}>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={styles.exerciseRowCleanName}>
+                                    {ex.order}. {ex.exerciseName}{' '}
+                                    <Text style={{ color: '#64748B', fontSize: 11 }}>({ex.muscleGroup})</Text>
+                                  </Text>
+                                  <Text style={styles.exerciseRowCleanSpec}>
+                                    {ex.targetSets} series × {ex.targetReps} reps · Pausa {ex.restSeconds}s · Objetivo:{' '}
+                                    <Text style={{ color: primaryColor, fontWeight: '800' }}>
+                                      RIR {rirVal} (RPE {ex.targetRpe})
+                                    </Text>
+                                  </Text>
+                                  {ex.coachNotes ? (
+                                    <Text style={styles.exerciseRowCleanNote}>
+                                      📌 {ex.coachNotes}
+                                    </Text>
+                                  ) : null}
+                                </View>
+
+                                <TouchableOpacity
+                                  style={styles.cleanSmallBtn}
+                                  onPress={() => {
+                                    if (isEditing) {
+                                      setEditingExerciseKey(null);
+                                    } else {
+                                      setEditingExerciseKey(editKey);
+                                      setEditSets(String(ex.targetSets));
+                                      setEditReps(ex.targetReps);
+                                      setEditRest(String(ex.restSeconds || 90));
+                                      setEditRir(String(rirVal));
+                                      setEditNotes(ex.coachNotes || '');
+                                    }
+                                  }}
+                                >
+                                  <Text style={styles.cleanSmallBtnText}>
+                                    {isEditing ? 'Cerrar' : 'Ajustar'}
+                                  </Text>
+                                </TouchableOpacity>
+
+                                {isEditing && (
+                                  <View style={styles.editFormInline}>
+                                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                                      <View style={{ flex: 1 }}>
+                                        <Text style={styles.miniLabel}>Series:</Text>
+                                        <TextInput
+                                          style={styles.cleanInput}
+                                          keyboardType="numeric"
+                                          value={editSets}
+                                          onChangeText={setEditSets}
+                                        />
+                                      </View>
+                                      <View style={{ flex: 1 }}>
+                                        <Text style={styles.miniLabel}>Repeticiones:</Text>
+                                        <TextInput
+                                          style={styles.cleanInput}
+                                          value={editReps}
+                                          onChangeText={setEditReps}
+                                        />
+                                      </View>
+                                      <View style={{ flex: 1 }}>
+                                        <Text style={styles.miniLabel}>Pausa (s):</Text>
+                                        <TextInput
+                                          style={styles.cleanInput}
+                                          keyboardType="numeric"
+                                          value={editRest}
+                                          onChangeText={setEditRest}
+                                        />
+                                      </View>
+                                    </View>
+                                    <View style={{ marginBottom: 10 }}>
+                                      <Text style={styles.miniLabel}>RIR Objetivo (Reps en recámara):</Text>
+                                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                                        {RIR_TRAFFIC_PRESETS.map((p) => {
+                                          const selected = editRir === String(p.rir);
+                                          return (
+                                            <TouchableOpacity
+                                              key={p.rir}
+                                              style={[
+                                                styles.rirChipMini,
+                                                { borderColor: p.color },
+                                                selected && { backgroundColor: p.color },
+                                              ]}
+                                              onPress={() => setEditRir(String(p.rir))}
+                                            >
+                                              <Text
+                                                style={[
+                                                  styles.rirChipMiniText,
+                                                  selected
+                                                    ? { color: '#FFF' }
+                                                    : { color: p.color },
+                                                ]}
+                                              >
+                                                {p.label}
+                                              </Text>
+                                            </TouchableOpacity>
+                                          );
+                                        })}
+                                      </View>
+                                    </View>
+                                    <Text style={styles.miniLabel}>Nota para el alumno:</Text>
+                                    <TextInput
+                                      style={styles.cleanInput}
+                                      value={editNotes}
+                                      onChangeText={setEditNotes}
+                                      placeholder="Ej: Cuidar técnica..."
+                                      placeholderTextColor="#64748B"
+                                    />
+                                    <TouchableOpacity
+                                      style={[styles.primaryActionBtn, { backgroundColor: '#10B981', marginTop: 4 }]}
+                                      onPress={() => {
+                                        const rirNum = parseInt(editRir, 10) || 2;
+                                        updateAthleteRoutineExercise(
+                                          activeAthleteRoutine.id,
+                                          day.dayId,
+                                          ex.exerciseId,
+                                          {
+                                            targetSets: parseInt(editSets, 10) || ex.targetSets,
+                                            targetReps: editReps.trim() || ex.targetReps,
+                                            restSeconds: parseInt(editRest, 10) || ex.restSeconds,
+                                            targetRir: rirNum,
+                                            targetRpe: Math.max(6, 10 - rirNum),
+                                            coachNotes: editNotes.trim(),
+                                          }
+                                        );
+                                        setEditingExerciseKey(null);
+                                      }}
+                                    >
+                                      <Text style={styles.primaryActionBtnText}>Guardar Ajuste</Text>
+                                    </TouchableOpacity>
+                                  </View>
+                                )}
+                              </View>
+                            );
+                          })}
                       </View>
                     ))}
                   </View>
@@ -749,7 +978,47 @@ export function CoachDashboardScreen({ primaryColor }: { primaryColor: string })
                         </TouchableOpacity>
                       </View>
 
-                      {/* Controles simples de carga: Series, Reps, RPE */}
+                      {/* Selector de Tipo de Bloque: Entrada en Calor vs Carga */}
+                      <View style={styles.blockTypeToggleRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.blockTypeBtn,
+                            ex.blockType === 'warmup' && styles.blockTypeBtnWarmupActive,
+                          ]}
+                          onPress={() => updateBuilderExerciseField(exIdx, 'blockType', 'warmup')}
+                        >
+                          <Text
+                            style={[
+                              styles.blockTypeBtnText,
+                              ex.blockType === 'warmup' && styles.blockTypeBtnTextWarmupActive,
+                            ]}
+                          >
+                            🔥 Entrada en Calor / Movilidad
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.blockTypeBtn,
+                            ex.blockType !== 'warmup' && {
+                              backgroundColor: '#431407',
+                              borderColor: primaryColor,
+                            },
+                          ]}
+                          onPress={() => updateBuilderExerciseField(exIdx, 'blockType', 'main')}
+                        >
+                          <Text
+                            style={[
+                              styles.blockTypeBtnText,
+                              ex.blockType !== 'warmup' && { color: primaryColor, fontWeight: '800' },
+                            ]}
+                          >
+                            ⚡ Bloque Principal de Carga
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {/* Fila 1: Series & Repeticiones */}
                       <View style={styles.controlsRowClean}>
                         {/* Series */}
                         <View style={styles.controlCol}>
@@ -802,38 +1071,90 @@ export function CoachDashboardScreen({ primaryColor }: { primaryColor: string })
                             })}
                           </View>
                         </View>
+                      </View>
 
-                        {/* RPE */}
-                        <View style={styles.controlCol}>
-                          <Text style={styles.controlMiniLabel}>RPE</Text>
-                          <View style={{ flexDirection: 'row', gap: 4 }}>
-                            {[7, 8, 9].map((r) => {
-                              const match = ex.targetRpe === r;
-                              return (
-                                <TouchableOpacity
-                                  key={r}
+                      {/* Fila 2: Pausa (Descanso fijado por los profesores) */}
+                      <View style={{ marginTop: 10 }}>
+                        <Text style={styles.controlMiniLabel}>⏱️ Pausa entre series (Descanso fijado por el profesor):</Text>
+                        <View style={{ flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                          {REST_PRESETS.map((sec) => {
+                            const isSelected = ex.restSeconds === sec;
+                            return (
+                              <TouchableOpacity
+                                key={sec}
+                                style={[
+                                  styles.restPresetChip,
+                                  isSelected && { backgroundColor: primaryColor, borderColor: primaryColor },
+                                ]}
+                                onPress={() => updateBuilderExerciseField(exIdx, 'restSeconds', sec)}
+                              >
+                                <Text
                                   style={[
-                                    styles.presetChip,
-                                    match && { backgroundColor: primaryColor, borderColor: primaryColor },
+                                    styles.restPresetChipText,
+                                    isSelected && { color: '#FFF', fontWeight: '800' },
                                   ]}
-                                  onPress={() => updateBuilderExerciseField(exIdx, 'targetRpe', r)}
                                 >
-                                  <Text style={[styles.presetChipText, match && { color: '#FFF', fontWeight: '800' }]}>
-                                    {r}
+                                  {sec}s
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </View>
+
+                      {/* Fila 3: Intensidad / RIR Objetivo (Semáforo de Colores) */}
+                      <View style={{ marginTop: 10 }}>
+                        <Text style={styles.controlMiniLabel}>🚦 Intensidad / RIR Objetivo (Semáforo Effort Gym):</Text>
+                        <View style={{ flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                          {RIR_TRAFFIC_PRESETS.map((p) => {
+                            const currentRir = ex.targetRir ?? Math.max(0, 10 - ex.targetRpe);
+                            const isMatch = currentRir === p.rir;
+                            return (
+                              <TouchableOpacity
+                                key={p.rir}
+                                style={[
+                                  styles.rirTrafficChip,
+                                  { borderColor: p.color },
+                                  isMatch ? { backgroundColor: p.color } : { backgroundColor: p.bg },
+                                ]}
+                                onPress={() => updateBuilderExerciseField(exIdx, 'targetRir', p.rir)}
+                              >
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                  <View
+                                    style={[
+                                      styles.semaforoDotSmall,
+                                      { backgroundColor: isMatch ? '#FFF' : p.color },
+                                    ]}
+                                  />
+                                  <Text
+                                    style={[
+                                      styles.rirTrafficChipText,
+                                      isMatch ? { color: '#FFF' } : { color: p.color },
+                                    ]}
+                                  >
+                                    {p.label}
                                   </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
+                                </View>
+                                <Text
+                                  style={[
+                                    styles.rirTrafficChipSub,
+                                    isMatch ? { color: '#F8FAFC' } : { color: '#94A3B8' },
+                                  ]}
+                                >
+                                  {p.sub}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
                         </View>
                       </View>
 
                       {/* Nota técnica opcional */}
                       <TextInput
-                        style={[styles.cleanInput, { fontSize: 11, paddingVertical: 6, marginTop: 8, marginBottom: 0 }]}
+                        style={[styles.cleanInput, { fontSize: 11, paddingVertical: 6, marginTop: 10, marginBottom: 0 }]}
                         value={ex.coachNotes}
                         onChangeText={(txt) => updateBuilderExerciseField(exIdx, 'coachNotes', txt)}
-                        placeholder="Indicación para el alumno (opcional)..."
+                        placeholder="Indicación técnica o de entrada en calor para el alumno..."
                         placeholderTextColor="#64748B"
                       />
                     </View>
@@ -964,6 +1285,22 @@ export function CoachDashboardScreen({ primaryColor }: { primaryColor: string })
         <View style={styles.card}>
           <Text style={styles.cardEyebrow}>BIBLIOTECA</Text>
           <Text style={styles.cardTitle}>Catálogo Effort Gym ({exercisesCatalog.length} ejercicios)</Text>
+
+          {/* Banner Canal Oficial YouTube Effort Gym */}
+          <TouchableOpacity
+            style={styles.youtubeCoachBanner}
+            onPress={() => Linking.openURL('https://www.youtube.com/@effortgym')}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.youtubeCoachTitle}>📺 CANAL OFICIAL EFFORT GYM EN YOUTUBE</Text>
+              <Text style={styles.youtubeCoachSub}>
+                Videos técnicos y de movilidad articular grabados por los profesores: https://www.youtube.com/@effortgym
+              </Text>
+            </View>
+            <View style={[styles.youtubeCoachBtn, { backgroundColor: '#EF4444' }]}>
+              <Text style={styles.youtubeCoachBtnText}>Ver Canal ▶</Text>
+            </View>
+          </TouchableOpacity>
 
           <TextInput
             style={[styles.cleanInput, { marginTop: 12 }]}
@@ -1531,5 +1868,129 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 10,
     marginTop: 2,
+  },
+  routineSectionSubHeader: {
+    backgroundColor: '#0D131F',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#1E293D',
+  },
+  routineSectionSubHeaderText: {
+    color: '#F59E0B',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  rirChipMini: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+    backgroundColor: '#0D131F',
+  },
+  rirChipMiniText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  blockTypeToggleRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 8,
+    flexWrap: 'wrap',
+  },
+  blockTypeBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#1E293D',
+    backgroundColor: '#0D131F',
+  },
+  blockTypeBtnWarmupActive: {
+    backgroundColor: '#451A03',
+    borderColor: '#EAB308',
+  },
+  blockTypeBtnText: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  blockTypeBtnTextWarmupActive: {
+    color: '#FDE047',
+    fontWeight: '800',
+  },
+  restPresetChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#1E293D',
+    backgroundColor: '#0D131F',
+  },
+  restPresetChipText: {
+    color: '#CBD5E1',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  rirTrafficChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    minWidth: 70,
+  },
+  rirTrafficChipText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  rirTrafficChipSub: {
+    fontSize: 9,
+    marginTop: 1,
+  },
+  semaforoDotSmall: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  youtubeCoachBanner: {
+    backgroundColor: '#0D131F',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#1E293D',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    marginBottom: 6,
+    gap: 10,
+  },
+  youtubeCoachTitle: {
+    color: '#F8FAFC',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  youtubeCoachSub: {
+    color: '#94A3B8',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  youtubeCoachBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  youtubeCoachBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
   },
 });

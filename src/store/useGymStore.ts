@@ -8,6 +8,7 @@ import {
   LoggedExercise,
   LoggedSet,
   RoutineDay,
+  RoutineExerciseItem,
   RoutineTemplate,
   UserRoutine,
   WorkoutSession,
@@ -93,14 +94,7 @@ interface GymStoreState {
     userRoutineId: string,
     dayId: string,
     exerciseId: string,
-    updates: {
-      targetSets?: number;
-      targetReps?: string;
-      targetRpe?: number;
-      restSeconds?: number;
-      coachNotes?: string;
-      videoUrl?: string;
-    }
+    updates: Partial<RoutineExerciseItem>
   ) => void;
   createAthleteInGym: (displayName: string, email: string) => GymUser | null;
   resetDemoData: () => void;
@@ -168,6 +162,7 @@ export const useGymStore = create<GymStoreState>()(
           const defaultReps = parseInt(ex.targetReps.split('-')[0], 10) || 8;
           const sets: LoggedSet[] = Array.from({ length: ex.targetSets }).map((_, idx) => {
             const prev = ex.lastSessionSets?.[idx];
+            const setRpe = prev ? prev.rpe : ex.targetRpe;
             return {
               id: `set_${ex.exerciseId}_${idx + 1}_${Date.now()}`,
               setNumber: idx + 1,
@@ -175,7 +170,8 @@ export const useGymStore = create<GymStoreState>()(
               // Zero-Friction: Autocompletamos con el peso y reps de la sesión anterior
               weight: prev ? prev.weight : 60,
               reps: prev ? prev.reps : defaultReps,
-              rpe: prev ? prev.rpe : ex.targetRpe,
+              rpe: setRpe,
+              rir: Math.max(0, 10 - setRpe),
               completed: false,
               previousWeight: prev?.weight,
               previousReps: prev?.reps,
@@ -183,13 +179,20 @@ export const useGymStore = create<GymStoreState>()(
             };
           });
 
+          const isWarmup =
+            ex.blockType === 'warmup' ||
+            ex.muscleGroup.toUpperCase().startsWith('MOVILIDAD') ||
+            ex.muscleGroup.toUpperCase().includes('LUMBOPELVICA');
+
           return {
             exerciseId: ex.exerciseId,
             exerciseName: ex.exerciseName,
             muscleGroup: ex.muscleGroup,
             targetReps: ex.targetReps,
             targetRpe: ex.targetRpe,
-            restSeconds: ex.restSeconds,
+            targetRir: ex.targetRir ?? Math.max(0, 10 - ex.targetRpe),
+            restSeconds: ex.restSeconds || 90,
+            blockType: ex.blockType || (isWarmup ? 'warmup' : 'main'),
             coachNotes: ex.coachNotes,
             videoUrl: ex.videoUrl,
             sets,
@@ -205,7 +208,7 @@ export const useGymStore = create<GymStoreState>()(
             startedAtMs: Date.now(),
             exercises: loggedExercises,
             restTimerEndMs: null,
-            activeRestDurationSec: 90,
+            activeRestDurationSec: loggedExercises[0]?.restSeconds || 90,
           },
           lastSavedBanner: null,
         });
@@ -218,7 +221,11 @@ export const useGymStore = create<GymStoreState>()(
         const exercises = [...current.exercises];
         const ex = { ...exercises[exerciseIndex] };
         const sets = [...ex.sets];
-        const targetSet = { ...sets[setIndex], [field]: Math.max(0, value) };
+        const updatedVal = Math.max(0, value);
+        const targetSet = { ...sets[setIndex], [field]: updatedVal };
+        if (field === 'rpe') {
+          targetSet.rir = Math.max(0, 10 - updatedVal);
+        }
         sets[setIndex] = targetSet;
         ex.sets = sets;
         ex.metrics = computeExerciseMetrics(sets);

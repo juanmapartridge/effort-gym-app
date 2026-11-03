@@ -12,15 +12,121 @@ import {
 import { useGymStore, calculateEstimated1RM } from '../store/useGymStore';
 import { LoggedExercise, LoggedSet, RoutineDay, UserRoutine } from '../types/models';
 
-const RPE_GUIDE: { value: number; short: string; desc: string }[] = [
-  { value: 7, short: '7 · Fácil', desc: 'Podía hacer 3 reps más' },
-  { value: 7.5, short: '7.5 · Moderado', desc: '2 a 3 reps en recámara' },
-  { value: 8, short: '8 · Óptimo', desc: 'Me quedaban 2 reps más' },
-  { value: 8.5, short: '8.5 · Exigente', desc: '1 a 2 reps más' },
-  { value: 9, short: '9 · Pesado', desc: 'Solo me quedaba 1 rep' },
-  { value: 9.5, short: '9.5 · Casi Tope', desc: 'No salía otra rep más' },
-  { value: 10, short: '10 · Al Fallo', desc: 'Esfuerzo máximo total' },
+export interface RpeTrafficItem {
+  value: number;
+  rir: number;
+  short: string;
+  desc: string;
+  color: string;
+  badgeBg: string;
+  textColor: string;
+  band: 'VERDE' | 'AMARILLO' | 'NARANJA' | 'ROJO';
+  levelName: string;
+}
+
+export const RPE_TRAFFIC_LIGHT: RpeTrafficItem[] = [
+  // Verde: Intensidad Ligera / Entrada en Calor / RIR 3-4+
+  {
+    value: 6,
+    rir: 4,
+    short: '6 · RIR 4',
+    desc: 'Muy liviano (podía hacer 4 reps más)',
+    color: '#10B981',
+    badgeBg: '#052E16',
+    textColor: '#34D399',
+    band: 'VERDE',
+    levelName: 'Leve / Entrada en Calor',
+  },
+  {
+    value: 7,
+    rir: 3,
+    short: '7 · RIR 3',
+    desc: 'Ligero / Entrada en calor (sobraban 3 reps)',
+    color: '#10B981',
+    badgeBg: '#052E16',
+    textColor: '#34D399',
+    band: 'VERDE',
+    levelName: 'Leve / Entrada en Calor',
+  },
+  // Amarillo: Moderado / Hipertrofia Óptima / RIR 2
+  {
+    value: 7.5,
+    rir: 2.5,
+    short: '7.5 · RIR 2.5',
+    desc: 'Moderado (2 a 3 reps en recámara)',
+    color: '#EAB308',
+    badgeBg: '#451A03',
+    textColor: '#FDE047',
+    band: 'AMARILLO',
+    levelName: 'Moderado / Hipertrofia',
+  },
+  {
+    value: 8,
+    rir: 2,
+    short: '8 · RIR 2',
+    desc: 'Hipertrofia Óptima (quedaban 2 reps)',
+    color: '#EAB308',
+    badgeBg: '#451A03',
+    textColor: '#FDE047',
+    band: 'AMARILLO',
+    levelName: 'Moderado / Hipertrofia',
+  },
+  // Naranja Effort: Pesado / Exigente / RIR 1
+  {
+    value: 8.5,
+    rir: 1.5,
+    short: '8.5 · RIR 1.5',
+    desc: 'Pesado Effort (1 a 2 reps más)',
+    color: '#F97316',
+    badgeBg: '#431407',
+    textColor: '#FB923C',
+    band: 'NARANJA',
+    levelName: 'Pesado / Exigente Effort',
+  },
+  {
+    value: 9,
+    rir: 1,
+    short: '9 · RIR 1',
+    desc: 'Exigente (solo me quedaba 1 rep más)',
+    color: '#F97316',
+    badgeBg: '#431407',
+    textColor: '#FB923C',
+    band: 'NARANJA',
+    levelName: 'Pesado / Exigente Effort',
+  },
+  // Rojo: Fallo Muscular / Máximo Esfuerzo / RIR 0
+  {
+    value: 9.5,
+    rir: 0.5,
+    short: '9.5 · RIR 0.5',
+    desc: 'Casi al límite (no salía otra con buena técnica)',
+    color: '#EF4444',
+    badgeBg: '#450A0A',
+    textColor: '#F87171',
+    band: 'ROJO',
+    levelName: 'Fallo / Máximo Esfuerzo',
+  },
+  {
+    value: 10,
+    rir: 0,
+    short: '10 · RIR 0',
+    desc: 'Al Fallo Total (esfuerzo 100% absoluto)',
+    color: '#EF4444',
+    badgeBg: '#450A0A',
+    textColor: '#F87171',
+    band: 'ROJO',
+    levelName: 'Fallo / Máximo Esfuerzo',
+  },
 ];
+
+export function getRpeTraffic(rpe: number): RpeTrafficItem {
+  const found = RPE_TRAFFIC_LIGHT.find((x) => x.value === rpe);
+  if (found) return found;
+  if (rpe <= 7) return RPE_TRAFFIC_LIGHT[1];
+  if (rpe <= 8) return RPE_TRAFFIC_LIGHT[3];
+  if (rpe <= 9) return RPE_TRAFFIC_LIGHT[5];
+  return RPE_TRAFFIC_LIGHT[7];
+}
 
 interface VideoModalState {
   visible: boolean;
@@ -114,7 +220,7 @@ const FloatingRestTimerBar = memo(
       <View style={styles.restBarContainer}>
         <View style={styles.restBarTopRow}>
           <View>
-            <Text style={styles.restLabel}>⏱️ DESCANSO ENTRE SERIES</Text>
+            <Text style={styles.restLabel}>⏱️ PAUSA ENTRE SERIES (EFFORT GYM)</Text>
             <Text style={styles.restCountdown}>
               {mins}:{String(secs).padStart(2, '0')}
             </Text>
@@ -170,6 +276,8 @@ const SetRow = memo(
 
     const [showRpePicker, setShowRpePicker] = useState(false);
 
+    const traffic = getRpeTraffic(item.rpe);
+
     const handleWeightChange = (txt: string) => {
       const parsed = parseFloat(txt.replace(',', '.'));
       updateSetField(exerciseIndex, setIndex, 'weight', isNaN(parsed) ? 0 : parsed);
@@ -218,7 +326,7 @@ const SetRow = memo(
                   {item.previousWeight}kg × {item.previousReps}
                 </Text>
                 <Text style={styles.prevSubText}>
-                  Esfuerzo {item.previousRpe ?? 8} (Tocar copia)
+                  RPE {item.previousRpe ?? 8} (Tocar copia)
                 </Text>
               </>
             ) : (
@@ -264,15 +372,21 @@ const SetRow = memo(
             />
           </View>
 
-          {/* 5. Selector táctil de Esfuerzo (RPE) */}
+          {/* 5. Selector táctil de Esfuerzo (RPE y RIR tipo semáforo) */}
           <TouchableOpacity
             style={[
               styles.rpePillButton,
-              item.rpe >= 9 && styles.rpeHighPill,
+              {
+                borderColor: traffic.color,
+                backgroundColor: traffic.badgeBg,
+              },
             ]}
             onPress={() => setShowRpePicker(!showRpePicker)}
           >
-            <Text style={styles.rpePillText}>{item.rpe}</Text>
+            <View style={[styles.semaforoDot, { backgroundColor: traffic.color }]} />
+            <Text style={[styles.rpePillText, { color: traffic.textColor }]}>
+              {item.rpe}
+            </Text>
           </TouchableOpacity>
 
           {/* 6. Checkbox de Confirmación en 1-Tap */}
@@ -294,47 +408,64 @@ const SetRow = memo(
           </TouchableOpacity>
         </View>
 
-        {/* Barra desplegable explicativa para elegir el Esfuerzo (RPE) de forma súper entendible */}
+        {/* Barra desplegable semáforo para elegir el Esfuerzo (RPE / RIR) */}
         {showRpePicker && (
           <View style={styles.inlineRpeBar}>
             <View style={styles.inlineRpeHeader}>
-              <Text style={styles.inlineRpeLabel}>
-                ¿Qué tan pesada sentiste esta serie? (Escala RPE):
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.inlineRpeLabel}>
+                  🚦 Semáforo de Intensidad (RPE / RIR Effort Gym):
+                </Text>
+                <Text style={styles.inlineRpeSub}>
+                  🟢 Verde (Leve) · 🟡 Amarillo (Óptimo) · 🟠 Naranja (Pesado) · 🔴 Rojo (Fallo)
+                </Text>
+              </View>
               <TouchableOpacity
                 style={styles.deleteSetBtn}
                 onPress={() => removeSetFromExercise(exerciseIndex, setIndex)}
               >
-                <Text style={styles.deleteSetText}>🗑 Quitar serie</Text>
+                <Text style={styles.deleteSetText}>🗑 Quitar</Text>
               </TouchableOpacity>
             </View>
+
             <View style={styles.inlineRpeOptions}>
-              {RPE_GUIDE.map((opt) => {
+              {RPE_TRAFFIC_LIGHT.map((opt) => {
                 const selected = item.rpe === opt.value;
                 return (
                   <TouchableOpacity
                     key={opt.value}
                     style={[
                       styles.rpeOptionChip,
-                      selected && { backgroundColor: primaryColor, borderColor: primaryColor },
+                      { borderColor: opt.color },
+                      selected
+                        ? { backgroundColor: opt.color }
+                        : { backgroundColor: opt.badgeBg },
                     ]}
                     onPress={() => {
                       updateSetField(exerciseIndex, setIndex, 'rpe', opt.value);
                       setShowRpePicker(false);
                     }}
                   >
-                    <Text
-                      style={[
-                        styles.rpeOptionText,
-                        selected && styles.rpeOptionTextActive,
-                      ]}
-                    >
-                      {opt.short}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <View
+                        style={[
+                          styles.semaforoDot,
+                          { backgroundColor: selected ? '#FFFFFF' : opt.color },
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.rpeOptionText,
+                          selected ? { color: '#FFFFFF' } : { color: opt.textColor },
+                        ]}
+                      >
+                        {opt.short}
+                      </Text>
+                    </View>
                     <Text
                       style={[
                         styles.rpeOptionSub,
-                        selected && { color: '#FFF' },
+                        selected ? { color: '#F1F5F9' } : { color: '#94A3B8' },
                       ]}
                     >
                       {opt.desc}
@@ -382,18 +513,35 @@ const ExerciseCard = memo(
 
     const completedCount = exercise.sets.filter((s) => s.completed).length;
 
+    const isWarmup =
+      exercise.blockType === 'warmup' ||
+      exercise.muscleGroup.toUpperCase().startsWith('MOVILIDAD') ||
+      exercise.muscleGroup.toUpperCase().includes('LUMBOPELVICA');
+
+    const targetTraffic = getRpeTraffic(exercise.targetRpe);
+
     return (
       <View style={styles.exerciseCard}>
         <View style={styles.exerciseHeader}>
           <View style={{ flex: 1 }}>
             <View style={styles.muscleTagRow}>
-              <Text style={[styles.muscleTag, { color: primaryColor }]}>
-                {exercise.muscleGroup.toUpperCase()}
-              </Text>
-              <Text style={styles.targetMetaText}>
-                Objetivo Profe: {exercise.targetReps} reps · Esfuerzo sugerido {exercise.targetRpe}{' '}
-                · Descanso {exercise.restSeconds}s
-              </Text>
+              {isWarmup ? (
+                <View style={styles.warmupBadgeTag}>
+                  <Text style={styles.warmupBadgeTagText}>🔥 ENTRADA EN CALOR</Text>
+                </View>
+              ) : (
+                <Text style={[styles.muscleTag, { color: primaryColor }]}>
+                  {exercise.muscleGroup.toUpperCase()}
+                </Text>
+              )}
+              <View style={styles.targetMetaPill}>
+                <Text style={styles.targetMetaText}>
+                  ⏱️ Pausa: <Text style={{ color: '#F8FAFC', fontWeight: '800' }}>{exercise.restSeconds}s</Text> · 🎯 Objetivo Profe:{' '}
+                  <Text style={{ color: targetTraffic.textColor, fontWeight: '800' }}>
+                    RIR {exercise.targetRir ?? Math.max(0, 10 - exercise.targetRpe)} (RPE {exercise.targetRpe})
+                  </Text>
+                </Text>
+              </View>
             </View>
             <Text style={styles.exerciseTitle}>{exercise.exerciseName}</Text>
             {exercise.coachNotes ? (
@@ -444,7 +592,7 @@ const ExerciseCard = memo(
           <Text style={[styles.colHeader, { flex: 1.2 }]}>SESIÓN ANTERIOR</Text>
           <Text style={[styles.colHeader, { width: 102, textAlign: 'center' }]}>PESO (KG)</Text>
           <Text style={[styles.colHeader, { width: 52, textAlign: 'center' }]}>REPS</Text>
-          <Text style={[styles.colHeader, { width: 46, textAlign: 'center' }]}>RPE</Text>
+          <Text style={[styles.colHeader, { width: 50, textAlign: 'center' }]}>RPE/RIR</Text>
           <Text style={[styles.colHeader, { width: 38, textAlign: 'center' }]}>LISTO</Text>
         </View>
 
@@ -611,16 +759,25 @@ export function WorkoutLoggerScreen({
 
             <View style={styles.videoPlaceholderNote}>
               <Text style={styles.videoPlaceholderNoteText}>
-                💡 Video demostrativo de referencia. Cuando Gian grabe los videos oficiales de Effort Gym, se conectarán directamente acá.
+                💡 En el canal de YouTube de Effort Gym (@effortgym) los profesores graban y actualizan las técnicas oficiales y las entradas en calor específicas.
               </Text>
             </View>
 
             {videoModal.coachNotes ? (
               <View style={styles.modalCoachBox}>
-                <Text style={styles.modalCoachLabel}>📌 Indicación de Gian:</Text>
+                <Text style={styles.modalCoachLabel}>📌 Indicación del Profesor:</Text>
                 <Text style={styles.modalCoachText}>{videoModal.coachNotes}</Text>
               </View>
             ) : null}
+
+            <TouchableOpacity
+              style={styles.modalEffortChannelBtn}
+              onPress={() => Linking.openURL('https://www.youtube.com/@effortgym')}
+            >
+              <Text style={styles.modalEffortChannelText}>
+                📺 Ir al Canal Oficial @effortgym en YouTube
+              </Text>
+            </TouchableOpacity>
 
             <View style={styles.modalButtonsRow}>
               <TouchableOpacity
@@ -635,10 +792,12 @@ export function WorkoutLoggerScreen({
                 onPress={() => {
                   if (videoModal.videoUrl) {
                     Linking.openURL(videoModal.videoUrl);
+                  } else {
+                    Linking.openURL('https://www.youtube.com/@effortgym');
                   }
                 }}
               >
-                <Text style={styles.modalYoutubeBtnText}>▶ Abrir en YouTube</Text>
+                <Text style={styles.modalYoutubeBtnText}>▶ Ver Video</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -895,47 +1054,110 @@ export function WorkoutLoggerScreen({
                 </TouchableOpacity>
               </View>
 
-              {day.exercises.map((ex) => {
-                const lastTopSet = ex.lastSessionSets?.[ex.lastSessionSets.length - 1];
-                return (
-                  <View key={ex.exerciseId} style={styles.dayExItem}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.dayExName}>
-                        {ex.order}. {ex.exerciseName}
-                      </Text>
-                      <Text style={styles.dayExPrescription}>
-                        {ex.targetSets} series de {ex.targetReps} reps · Descanso {ex.restSeconds}s
-                      </Text>
-                      {ex.coachNotes ? (
-                        <Text style={styles.dayExNotes}>📌 {ex.coachNotes}</Text>
-                      ) : null}
+              {/* Agrupación en Entrada en Calor vs Bloque Principal */}
+              {day.exercises.some((e) => e.blockType === 'warmup') && (
+                <View style={styles.previewSectionTag}>
+                  <Text style={styles.previewSectionTagText}>🔥 BLOQUE 1: ENTRADA EN CALOR & MOVILIDAD</Text>
+                </View>
+              )}
+              {day.exercises
+                .filter((e) => e.blockType === 'warmup')
+                .map((ex) => {
+                  const lastTopSet = ex.lastSessionSets?.[ex.lastSessionSets.length - 1];
+                  return (
+                    <View key={ex.exerciseId} style={styles.dayExItem}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.dayExName}>
+                          {ex.order}. {ex.exerciseName}
+                        </Text>
+                        <Text style={styles.dayExPrescription}>
+                          {ex.targetSets} series de {ex.targetReps} reps · Pausa {ex.restSeconds}s
+                        </Text>
+                        {ex.coachNotes ? (
+                          <Text style={styles.dayExNotes}>📌 {ex.coachNotes}</Text>
+                        ) : null}
+                      </View>
+
+                      <View style={styles.previewRightActions}>
+                        <TouchableOpacity
+                          style={styles.miniVideoBtn}
+                          onPress={() => openVideoGuide(ex)}
+                        >
+                          <Text style={styles.miniVideoBtnText}>🎥 Técnica</Text>
+                        </TouchableOpacity>
+
+                        {lastTopSet ? (
+                          <View style={styles.lastPerfTag}>
+                            <Text style={styles.lastPerfLabel}>Última marca</Text>
+                            <Text style={styles.lastPerfValue}>
+                              {lastTopSet.weight}kg × {lastTopSet.reps}
+                            </Text>
+                          </View>
+                        ) : (
+                          <View style={styles.lastPerfTag}>
+                            <Text style={styles.lastPerfLabel}>Nuevo</Text>
+                            <Text style={styles.lastPerfValue}>Estreno</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
+                  );
+                })}
 
-                    <View style={styles.previewRightActions}>
-                      <TouchableOpacity
-                        style={styles.miniVideoBtn}
-                        onPress={() => openVideoGuide(ex)}
-                      >
-                        <Text style={styles.miniVideoBtnText}>🎥 Técnica</Text>
-                      </TouchableOpacity>
-
-                      {lastTopSet ? (
-                        <View style={styles.lastPerfTag}>
-                          <Text style={styles.lastPerfLabel}>Última marca</Text>
-                          <Text style={styles.lastPerfValue}>
-                            {lastTopSet.weight}kg × {lastTopSet.reps}
+              {day.exercises.some((e) => e.blockType !== 'warmup') && (
+                <View style={[styles.previewSectionTag, { marginTop: 14 }]}>
+                  <Text style={[styles.previewSectionTagText, { color: primaryColor }]}>
+                    ⚡ BLOQUE 2: CARGA PRINCIPAL & FUERZA
+                  </Text>
+                </View>
+              )}
+              {day.exercises
+                .filter((e) => e.blockType !== 'warmup')
+                .map((ex) => {
+                  const lastTopSet = ex.lastSessionSets?.[ex.lastSessionSets.length - 1];
+                  const traffic = getRpeTraffic(ex.targetRpe);
+                  return (
+                    <View key={ex.exerciseId} style={styles.dayExItem}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.dayExName}>
+                          {ex.order}. {ex.exerciseName}
+                        </Text>
+                        <Text style={styles.dayExPrescription}>
+                          {ex.targetSets} series de {ex.targetReps} reps · Pausa {ex.restSeconds}s · Objetivo:{' '}
+                          <Text style={{ color: traffic.textColor, fontWeight: '800' }}>
+                            RIR {ex.targetRir ?? Math.max(0, 10 - ex.targetRpe)} (RPE {ex.targetRpe})
                           </Text>
-                        </View>
-                      ) : (
-                        <View style={styles.lastPerfTag}>
-                          <Text style={styles.lastPerfLabel}>Nuevo</Text>
-                          <Text style={styles.lastPerfValue}>Estreno</Text>
-                        </View>
-                      )}
+                        </Text>
+                        {ex.coachNotes ? (
+                          <Text style={styles.dayExNotes}>📌 {ex.coachNotes}</Text>
+                        ) : null}
+                      </View>
+
+                      <View style={styles.previewRightActions}>
+                        <TouchableOpacity
+                          style={styles.miniVideoBtn}
+                          onPress={() => openVideoGuide(ex)}
+                        >
+                          <Text style={styles.miniVideoBtnText}>🎥 Técnica</Text>
+                        </TouchableOpacity>
+
+                        {lastTopSet ? (
+                          <View style={styles.lastPerfTag}>
+                            <Text style={styles.lastPerfLabel}>Última marca</Text>
+                            <Text style={styles.lastPerfValue}>
+                              {lastTopSet.weight}kg × {lastTopSet.reps}
+                            </Text>
+                          </View>
+                        ) : (
+                          <View style={styles.lastPerfTag}>
+                            <Text style={styles.lastPerfLabel}>Nuevo</Text>
+                            <Text style={styles.lastPerfValue}>Estreno</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
-                  </View>
-                );
-              })}
+                  );
+                })}
             </View>
           ))
         )}
@@ -1026,16 +1248,79 @@ export function WorkoutLoggerScreen({
           </Text>
         </View>
 
-        {activeWorkout.exercises.map((ex, idx) => (
-          <ExerciseCard
-            key={ex.exerciseId}
-            exercise={ex}
-            exerciseIndex={idx}
-            primaryColor={primaryColor}
-            onOpenVideo={openVideoGuide}
-            onOpenSubstitute={openSubstituteModal}
-          />
-        ))}
+        {/* Banner de canal oficial de YouTube de Effort Gym */}
+        <TouchableOpacity
+          style={styles.youtubeChannelBanner}
+          onPress={() => Linking.openURL('https://www.youtube.com/@effortgym')}
+        >
+          <View style={styles.ytBannerLeft}>
+            <Text style={styles.ytBannerTitle}>📺 CANAL OFICIAL EFFORT GYM EN YOUTUBE</Text>
+            <Text style={styles.ytBannerSub}>
+              Mirá las técnicas y entradas en calor grabadas por los profesores en @effortgym
+            </Text>
+          </View>
+          <View style={styles.ytBannerBtn}>
+            <Text style={styles.ytBannerBtnText}>Ver Canal ▶</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* 1. Bloque de Entrada en Calor & Movilidad (si existe en la rutina) */}
+        {activeWorkout.exercises.some((e) => e.blockType === 'warmup') && (
+          <View style={styles.blockSectionHeader}>
+            <View style={styles.blockIconWarmup}>
+              <Text style={styles.blockSectionEmoji}>🔥</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.blockSectionTitle}>BLOQUE 1: ENTRADA EN CALOR & MOVILIDAD</Text>
+              <Text style={styles.blockSectionSubtitle}>
+                Activación y movilidad articular previa indicada por los profesores
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {activeWorkout.exercises.map((ex, idx) => {
+          if (ex.blockType !== 'warmup') return null;
+          return (
+            <ExerciseCard
+              key={ex.exerciseId}
+              exercise={ex}
+              exerciseIndex={idx}
+              primaryColor={primaryColor}
+              onOpenVideo={openVideoGuide}
+              onOpenSubstitute={openSubstituteModal}
+            />
+          );
+        })}
+
+        {/* 2. Bloque Principal de Carga y Fuerza */}
+        {activeWorkout.exercises.some((e) => e.blockType !== 'warmup') && (
+          <View style={[styles.blockSectionHeader, { marginTop: 24 }]}>
+            <View style={[styles.blockIconWarmup, { backgroundColor: primaryColor }]}>
+              <Text style={styles.blockSectionEmoji}>⚡</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.blockSectionTitle}>BLOQUE 2: CARGA PRINCIPAL & FUERZA</Text>
+              <Text style={styles.blockSectionSubtitle}>
+                Series efectivas · Registra tus marcas y califica el esfuerzo con el semáforo RPE
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {activeWorkout.exercises.map((ex, idx) => {
+          if (ex.blockType === 'warmup') return null;
+          return (
+            <ExerciseCard
+              key={ex.exerciseId}
+              exercise={ex}
+              exerciseIndex={idx}
+              primaryColor={primaryColor}
+              onOpenVideo={openVideoGuide}
+              onOpenSubstitute={openSubstituteModal}
+            />
+          );
+        })}
       </ScrollView>
 
       {/* Temporizador de Descanso Flotante */}
@@ -1958,5 +2243,132 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '800',
+  },
+  semaforoDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginRight: 4,
+  },
+  inlineRpeSub: {
+    color: '#94A3B8',
+    fontSize: 10,
+    marginTop: 2,
+  },
+  warmupBadgeTag: {
+    backgroundColor: '#78350F',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  warmupBadgeTagText: {
+    color: '#FDE68A',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  targetMetaPill: {
+    backgroundColor: '#0D131F',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#1E293D',
+  },
+  modalEffortChannelBtn: {
+    backgroundColor: '#7C2D12',
+    borderColor: '#EA580C',
+    borderWidth: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalEffortChannelText: {
+    color: '#FED7AA',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  previewSectionTag: {
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  previewSectionTagText: {
+    color: '#F59E0B',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  youtubeChannelBanner: {
+    backgroundColor: '#1E293B',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    gap: 10,
+  },
+  ytBannerLeft: {
+    flex: 1,
+  },
+  ytBannerTitle: {
+    color: '#F8FAFC',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  ytBannerSub: {
+    color: '#94A3B8',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  ytBannerBtn: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  ytBannerBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  blockSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+    paddingHorizontal: 2,
+  },
+  blockIconWarmup: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: '#F59E0B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  blockSectionEmoji: {
+    fontSize: 15,
+  },
+  blockSectionTitle: {
+    color: '#F8FAFC',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  blockSectionSubtitle: {
+    color: '#94A3B8',
+    fontSize: 11,
+    marginTop: 1,
   },
 });

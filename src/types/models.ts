@@ -44,7 +44,9 @@ export interface RoutineExerciseItem {
   targetSets: number;
   targetReps: string; // ej. "6-8"
   targetRpe: number;  // ej. 8
-  restSeconds: number;
+  targetRir?: number; // ej. 2 (RIR = 10 - targetRpe)
+  restSeconds: number; // Pausa fijada por los profesores (ej. 90s)
+  blockType?: 'warmup' | 'main'; // 'warmup' (Entrada en calor) | 'main' (Bloque principal)
   coachNotes?: string;
   videoUrl?: string;
   // Desnormalizado en user_routines para autocompletado instantáneo (0 lecturas extra)
@@ -91,6 +93,7 @@ export interface LoggedSet {
   weight: number;
   reps: number;
   rpe: number;
+  rir?: number;
   completed: boolean;
   // Valores de la sesión anterior para mostrar en columna "SESIÓN ANTERIOR" y autocompletar en 1 tap
   previousWeight?: number;
@@ -104,7 +107,9 @@ export interface LoggedExercise {
   muscleGroup: string;
   targetReps: string;
   targetRpe: number;
-  restSeconds: number;
+  targetRir?: number;
+  restSeconds: number; // Pausa fijada por los profesores
+  blockType?: 'warmup' | 'main';
   coachNotes?: string;
   videoUrl?: string;
   sets: LoggedSet[];
