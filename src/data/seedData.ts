@@ -1,4 +1,7 @@
 import {
+  calculateEffectiveReps,
+  inferBodyZone,
+  inferExerciseTier,
   ExerciseCatalogItem,
   GymTenant,
   GymUser,
@@ -515,9 +518,9 @@ export const SEED_USER_ROUTINES: UserRoutine[] = [
   },
 ];
 
-// Historial multi-mes (Septiembre vs Octubre) con todas las categorías de Effort Gym
-// para nutrir el Gráfico de Barras Semanal/Mensual, Dispersión/Línea de 1RM y Gráfico de Torta
-export const SEED_WORKOUT_SESSIONS: WorkoutSession[] = [
+// Historial multi-mes (Septiembre vs Octubre vs Noviembre) con todas las categorías de Effort Gym
+// para nutrir el Gráfico de Barras Semanal/Mensual, Dispersión/Línea de 1RM, Gráfico de Torta y Reps Efectivas
+const RAW_SEED_SESSIONS: WorkoutSession[] = [
   {
     id: 'sess_sep_1',
     gymId: 'gym_effort',
@@ -532,6 +535,8 @@ export const SEED_WORKOUT_SESSIONS: WorkoutSession[] = [
     totalVolumeKg: 4380,
     totalCompletedSets: 13,
     averageSessionRpe: 7.7,
+    preWorkoutRecovery: 8,
+    sessionRpe: 7.5,
     exercises: [
       {
         exerciseId: 'ex_c1164817',
@@ -967,4 +972,111 @@ export const SEED_WORKOUT_SESSIONS: WorkoutSession[] = [
       },
     ],
   },
+  {
+    id: 'sess_nov_1',
+    gymId: 'gym_effort',
+    userId: 'usr_athlete_1',
+    athleteName: 'Martín Echeverría',
+    userRoutineId: 'urout_martin_effort',
+    dayId: 'day_inf_1',
+    dayName: 'Día 2 - Hemisferio Inferior + Movilidad Cadera',
+    startedAt: '2026-11-05T18:00:00Z',
+    completedAt: '2026-11-05T18:55:00Z',
+    durationSeconds: 3300,
+    totalVolumeKg: 5850,
+    totalCompletedSets: 12,
+    averageSessionRpe: 8.0,
+    preWorkoutRecovery: 9,
+    sessionRpe: 8.0,
+    exercises: [
+      {
+        exerciseId: 'ex_2c0ae273',
+        exerciseName: 'HIP 90 - 90',
+        muscleGroup: 'MOVILIDAD CADERA',
+        targetReps: '10',
+        targetRpe: 7,
+        restSeconds: 45,
+        sets: [
+          { id: 'sn1', setNumber: 1, type: 'working', weight: 10, reps: 10, rpe: 7, completed: true },
+          { id: 'sn2', setNumber: 2, type: 'working', weight: 10, reps: 10, rpe: 7, completed: true },
+        ],
+        metrics: { totalVolumeKg: 200, maxWeightKg: 10, estimated1RM: 13.3, averageRpe: 7.0 },
+      },
+      {
+        exerciseId: 'ex_0c491f10',
+        exerciseName: 'BACK DEEP SQUAT C/BARRA',
+        muscleGroup: 'HEMISFERIO INFERIOR',
+        targetReps: '5-6',
+        targetRpe: 8,
+        restSeconds: 150,
+        sets: [
+          { id: 'sn3', setNumber: 1, type: 'working', weight: 110, reps: 6, rpe: 7.5, completed: true },
+          { id: 'sn4', setNumber: 2, type: 'working', weight: 115, reps: 6, rpe: 8, completed: true },
+          { id: 'sn5', setNumber: 3, type: 'working', weight: 115, reps: 5, rpe: 8, completed: true },
+          { id: 'sn6', setNumber: 4, type: 'working', weight: 118, reps: 5, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 2545, maxWeightKg: 118, estimated1RM: 137.7, averageRpe: 8.0 },
+      },
+      {
+        exerciseId: 'ex_b5d74e8e',
+        exerciseName: 'PESO MUERTO RUMANO C/BARRA',
+        muscleGroup: 'HEMISFERIO INFERIOR',
+        targetReps: '8-10',
+        targetRpe: 8,
+        restSeconds: 120,
+        sets: [
+          { id: 'sn7', setNumber: 1, type: 'working', weight: 100, reps: 10, rpe: 8, completed: true },
+          { id: 'sn8', setNumber: 2, type: 'working', weight: 100, reps: 9, rpe: 8.5, completed: true },
+          { id: 'sn9', setNumber: 3, type: 'working', weight: 102.5, reps: 8, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 2720, maxWeightKg: 102.5, estimated1RM: 130.0, averageRpe: 8.3 },
+      },
+    ],
+  },
 ];
+
+export const SEED_WORKOUT_SESSIONS: WorkoutSession[] = RAW_SEED_SESSIONS.map((sess) => {
+  const exercises = sess.exercises.map((ex) => {
+    const tier = ex.exerciseTier || inferExerciseTier(ex.exerciseName, ex.muscleGroup);
+    const zone = ex.bodyZone || inferBodyZone(ex.muscleGroup);
+    let totalEff = 0;
+    const sets = ex.sets.map((s) => {
+      const rirVal = s.rir !== undefined ? s.rir : Math.max(0, 10 - s.rpe);
+      const eff =
+        s.effectiveReps !== undefined
+          ? s.effectiveReps
+          : calculateEffectiveReps(s.reps, rirVal, s.rpe);
+      if (s.completed && s.type === 'working') {
+        totalEff += eff;
+      }
+      return {
+        ...s,
+        rir: rirVal,
+        effectiveReps: eff,
+      };
+    });
+    return {
+      ...ex,
+      exerciseTier: tier,
+      bodyZone: zone,
+      sets,
+      metrics: {
+        ...ex.metrics,
+        totalEffectiveReps: totalEff,
+      },
+    };
+  });
+
+  const totalEffectiveReps = exercises.reduce(
+    (acc, e) => acc + (e.metrics.totalEffectiveReps || 0),
+    0
+  );
+
+  return {
+    ...sess,
+    preWorkoutRecovery: sess.preWorkoutRecovery ?? 8,
+    sessionRpe: sess.sessionRpe ?? Math.round(sess.averageSessionRpe * 10) / 10,
+    totalEffectiveReps,
+    exercises,
+  };
+});

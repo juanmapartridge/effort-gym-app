@@ -2,6 +2,9 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  calculateEffectiveReps,
+  inferBodyZone,
+  inferExerciseTier,
   ExerciseCatalogItem,
   GymTenant,
   GymUser,
@@ -35,6 +38,8 @@ export interface ActiveWorkoutDraft {
   exercises: LoggedExercise[];
   restTimerEndMs: number | null;
   activeRestDurationSec: number;
+  preWorkoutRecovery?: number; // Escala 1 al 10 antes de iniciar
+  sessionRpe?: number;         // Escala 1 al 10 al finalizar
 }
 
 interface GymStoreState {
@@ -59,7 +64,9 @@ interface GymStoreState {
   clearSavedBanner: () => void;
 
   // Acciones del Workout Logger ("Zero-Friction")
-  startWorkoutDay: (userRoutine: UserRoutine, day: RoutineDay) => void;
+  startWorkoutDay: (userRoutine: UserRoutine, day: RoutineDay, preWorkoutRecovery?: number) => void;
+  setPreWorkoutRecovery: (recovery: number) => void;
+  setSessionRpe: (sessionRpe: number) => void;
   updateSetField: (
     exerciseIndex: number,
     setIndex: number,
@@ -73,7 +80,7 @@ interface GymStoreState {
   removeSetFromExercise: (exerciseIndex: number, setIndex: number) => void;
   adjustRestTimer: (deltaSeconds: number) => void;
   skipRestTimer: () => void;
-  finishActiveWorkout: () => Promise<WorkoutSession | null>;
+  finishActiveWorkout: (sessionRpe?: number) => Promise<WorkoutSession | null>;
   discardActiveWorkout: () => void;
   substituteExerciseInActiveWorkout: (exerciseIndex: number, newExerciseId: string) => void;
 
@@ -112,13 +119,20 @@ export function calculateEstimated1RM(weight: number, reps: number): number {
 function computeExerciseMetrics(sets: LoggedSet[]) {
   const completedWorkingSets = sets.filter((s) => s.completed && s.type === 'working');
   if (completedWorkingSets.length === 0) {
-    return { totalVolumeKg: 0, maxWeightKg: 0, estimated1RM: 0, averageRpe: 0 };
+    return {
+      totalVolumeKg: 0,
+      maxWeightKg: 0,
+      estimated1RM: 0,
+      averageRpe: 0,
+      totalEffectiveReps: 0,
+    };
   }
 
   let totalVolumeKg = 0;
   let maxWeightKg = 0;
   let best1RM = 0;
   let rpeSum = 0;
+  let totalEffectiveReps = 0;
 
   for (const s of completedWorkingSets) {
     totalVolumeKg += s.weight * s.reps;
@@ -126,6 +140,10 @@ function computeExerciseMetrics(sets: LoggedSet[]) {
     const e1rm = calculateEstimated1RM(s.weight, s.reps);
     if (e1rm > best1RM) best1RM = e1rm;
     rpeSum += s.rpe;
+    const eff = s.effectiveReps !== undefined
+      ? s.effectiveReps
+      : calculateEffectiveReps(s.reps, s.rir, s.rpe);
+    totalEffectiveReps += eff;
   }
 
   return {
@@ -133,6 +151,7 @@ function computeExerciseMetrics(sets: LoggedSet[]) {
     maxWeightKg,
     estimated1RM: best1RM,
     averageRpe: Math.round((rpeSum / completedWorkingSets.length) * 10) / 10,
+    totalEffectiveReps,
   };
 }
 
@@ -157,12 +176,14 @@ export const useGymStore = create<GymStoreState>()(
 
       clearSavedBanner: () => set({ lastSavedBanner: null }),
 
-      startWorkoutDay: (userRoutine, day) => {
+      startWorkoutDay: (userRoutine, day, preWorkoutRecovery = 8) => {
         const loggedExercises: LoggedExercise[] = day.exercises.map((ex) => {
           const defaultReps = parseInt(ex.targetReps.split('-')[0], 10) || 8;
           const sets: LoggedSet[] = Array.from({ length: ex.targetSets }).map((_, idx) => {
             const prev = ex.lastSessionSets?.[idx];
             const setRpe = prev ? prev.rpe : ex.targetRpe;
+            const rirVal = Math.max(0, 10 - setRpe);
+            const effReps = calculateEffectiveReps(prev ? prev.reps : defaultReps, rirVal, setRpe);
             return {
               id: `set_${ex.exerciseId}_${idx + 1}_${Date.now()}`,
               setNumber: idx + 1,
@@ -171,7 +192,8 @@ export const useGymStore = create<GymStoreState>()(
               weight: prev ? prev.weight : 60,
               reps: prev ? prev.reps : defaultReps,
               rpe: setRpe,
-              rir: Math.max(0, 10 - setRpe),
+              rir: rirVal,
+              effectiveReps: effReps,
               completed: false,
               previousWeight: prev?.weight,
               previousReps: prev?.reps,
@@ -193,10 +215,18 @@ export const useGymStore = create<GymStoreState>()(
             targetRir: ex.targetRir ?? Math.max(0, 10 - ex.targetRpe),
             restSeconds: ex.restSeconds || 90,
             blockType: ex.blockType || (isWarmup ? 'warmup' : 'main'),
+            exerciseTier: ex.exerciseTier || inferExerciseTier(ex.exerciseName, ex.muscleGroup),
+            bodyZone: ex.bodyZone || inferBodyZone(ex.muscleGroup),
             coachNotes: ex.coachNotes,
             videoUrl: ex.videoUrl,
             sets,
-            metrics: { totalVolumeKg: 0, maxWeightKg: 0, estimated1RM: 0, averageRpe: 0 },
+            metrics: {
+              totalVolumeKg: 0,
+              maxWeightKg: 0,
+              estimated1RM: 0,
+              averageRpe: 0,
+              totalEffectiveReps: 0,
+            },
           };
         });
 
@@ -209,8 +239,32 @@ export const useGymStore = create<GymStoreState>()(
             exercises: loggedExercises,
             restTimerEndMs: null,
             activeRestDurationSec: loggedExercises[0]?.restSeconds || 90,
+            preWorkoutRecovery,
+            sessionRpe: undefined,
           },
           lastSavedBanner: null,
+        });
+      },
+
+      setPreWorkoutRecovery: (recovery: number) => {
+        const current = get().activeWorkout;
+        if (!current) return;
+        set({
+          activeWorkout: {
+            ...current,
+            preWorkoutRecovery: Math.min(10, Math.max(1, Math.round(recovery))),
+          },
+        });
+      },
+
+      setSessionRpe: (sessionRpe: number) => {
+        const current = get().activeWorkout;
+        if (!current) return;
+        set({
+          activeWorkout: {
+            ...current,
+            sessionRpe: Math.min(10, Math.max(1, Math.round(sessionRpe))),
+          },
         });
       },
 
@@ -226,6 +280,11 @@ export const useGymStore = create<GymStoreState>()(
         if (field === 'rpe') {
           targetSet.rir = Math.max(0, 10 - updatedVal);
         }
+        targetSet.effectiveReps = calculateEffectiveReps(
+          targetSet.reps,
+          targetSet.rir,
+          targetSet.rpe
+        );
         sets[setIndex] = targetSet;
         ex.sets = sets;
         ex.metrics = computeExerciseMetrics(sets);
@@ -402,7 +461,7 @@ export const useGymStore = create<GymStoreState>()(
         });
       },
 
-      finishActiveWorkout: async () => {
+      finishActiveWorkout: async (sessionRpeParam?: number) => {
         const state = get();
         const draft = state.activeWorkout;
         if (!draft) return null;
@@ -420,6 +479,11 @@ export const useGymStore = create<GymStoreState>()(
           0
         );
 
+        const totalEffectiveReps = finalizedExercises.reduce(
+          (acc, ex) => acc + (ex.metrics.totalEffectiveReps || 0),
+          0
+        );
+
         const completedSets = finalizedExercises.flatMap((ex) =>
           ex.sets.filter((s) => s.completed)
         );
@@ -430,6 +494,13 @@ export const useGymStore = create<GymStoreState>()(
                 (completedSets.reduce((acc, s) => acc + s.rpe, 0) / completedSets.length) * 10
               ) / 10
             : 0;
+
+        const finalSessionRpe =
+          sessionRpeParam !== undefined
+            ? Math.min(10, Math.max(1, sessionRpeParam))
+            : draft.sessionRpe !== undefined
+            ? draft.sessionRpe
+            : avgSessionRpe;
 
         const nowIso = new Date().toISOString();
         const durationSeconds = Math.max(
@@ -451,6 +522,9 @@ export const useGymStore = create<GymStoreState>()(
           totalVolumeKg: Math.round(totalVolumeKg * 10) / 10,
           totalCompletedSets: completedSets.length,
           averageSessionRpe: avgSessionRpe,
+          preWorkoutRecovery: draft.preWorkoutRecovery ?? 8,
+          sessionRpe: finalSessionRpe,
+          totalEffectiveReps,
           exercises: finalizedExercises,
         };
 

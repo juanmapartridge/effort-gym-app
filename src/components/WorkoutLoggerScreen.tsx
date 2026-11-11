@@ -10,7 +10,20 @@ import {
   Linking,
 } from 'react-native';
 import { useGymStore, calculateEstimated1RM } from '../store/useGymStore';
-import { LoggedExercise, LoggedSet, RoutineDay, UserRoutine } from '../types/models';
+import {
+  calculateEffectiveReps,
+  LoggedExercise,
+  LoggedSet,
+  RoutineDay,
+  UserRoutine,
+} from '../types/models';
+
+export function getRecoveryColor(val: number) {
+  if (val <= 3) return { text: '#EF4444', border: '#EF4444', bg: '#450A0A' };
+  if (val <= 6) return { text: '#EAB308', border: '#EAB308', bg: '#422006' };
+  if (val <= 8) return { text: '#10B981', border: '#10B981', bg: '#052E16' };
+  return { text: '#06B6D4', border: '#06B6D4', bg: '#083344' };
+}
 
 export interface RpeTrafficItem {
   value: number;
@@ -408,6 +421,19 @@ const SetRow = memo(
           </TouchableOpacity>
         </View>
 
+        {/* Indicador sutil de Repeticiones Efectivas según RIR */}
+        {item.type === 'working' && (
+          <View style={styles.setRowMetaLine}>
+            <Text style={styles.setRowMetaText}>
+              ⚡ <Text style={{ color: (item.effectiveReps ?? calculateEffectiveReps(item.reps, item.rir, item.rpe)) > 0 ? '#10B981' : '#64748B', fontWeight: '800' }}>
+                {item.effectiveReps ?? calculateEffectiveReps(item.reps, item.rir, item.rpe)}{' '}
+                {(item.effectiveReps ?? calculateEffectiveReps(item.reps, item.rir, item.rpe)) === 1 ? 'repe efectiva' : 'repes efectivas'}
+              </Text>{' '}
+              · RIR {item.rir ?? Math.max(0, 10 - item.rpe)} {((item.rir ?? Math.max(0, 10 - item.rpe)) <= 4) ? '✓' : '(RIR > 4 = 0)'}
+            </Text>
+          </View>
+        )}
+
         {/* Barra desplegable semáforo para elegir el Esfuerzo (RPE / RIR) */}
         {showRpePicker && (
           <View style={styles.inlineRpeBar}>
@@ -676,6 +702,13 @@ export function WorkoutLoggerScreen({
     session: null,
     copied: false,
   });
+
+  // Estado para el Registro de Recuperación Previa (1 al 10)
+  const [preRecovery, setPreRecovery] = useState<number>(8);
+
+  // Estado para el Registro de RPE de Sesión al Finalizar (1 al 10)
+  const [showSessionRpeModal, setShowSessionRpeModal] = useState<boolean>(false);
+  const [selectedSessionRpe, setSelectedSessionRpe] = useState<number>(8);
 
   const currentUser = users.find((u) => u.id === currentUserId);
 
@@ -946,27 +979,27 @@ export function WorkoutLoggerScreen({
               </View>
 
               <View style={styles.summaryGridItem}>
-                <Text style={styles.summaryGridLabel}>SERIES EFECTIVAS</Text>
-                <Text style={styles.summaryGridValue}>
-                  {session.totalCompletedSets}
+                <Text style={styles.summaryGridLabel}>REPS EFECTIVAS</Text>
+                <Text style={[styles.summaryGridValue, { color: '#10B981' }]}>
+                  ⚡ {session.totalEffectiveReps ?? 0}
                 </Text>
-                <Text style={styles.summaryGridSub}>Completadas hoy</Text>
+                <Text style={styles.summaryGridSub}>RIR ≤ 4</Text>
               </View>
 
               <View style={styles.summaryGridItem}>
-                <Text style={styles.summaryGridLabel}>DURACIÓN</Text>
-                <Text style={styles.summaryGridValue}>
-                  {Math.round(session.durationSeconds / 60)} min
+                <Text style={styles.summaryGridLabel}>RECUPERACIÓN</Text>
+                <Text style={[styles.summaryGridValue, { color: '#06B6D4' }]}>
+                  {session.preWorkoutRecovery ?? 8}/10
                 </Text>
-                <Text style={styles.summaryGridSub}>Tiempo en sala</Text>
+                <Text style={styles.summaryGridSub}>Estado previo</Text>
               </View>
 
               <View style={styles.summaryGridItem}>
-                <Text style={styles.summaryGridLabel}>ESFUERZO</Text>
+                <Text style={styles.summaryGridLabel}>RPE DE SESIÓN</Text>
                 <Text style={[styles.summaryGridValue, { color: '#FBBF24' }]}>
-                  {session.averageSessionRpe}
+                  {session.sessionRpe ?? session.averageSessionRpe}/10
                 </Text>
-                <Text style={styles.summaryGridSub}>RPE Promedio</Text>
+                <Text style={styles.summaryGridSub}>Esfuerzo global</Text>
               </View>
             </View>
 
@@ -1009,6 +1042,97 @@ export function WorkoutLoggerScreen({
     );
   };
 
+  // Modal para calificar el Esfuerzo Global de la Sesión (RPE 1 al 10) al Terminar
+  const renderSessionRpeModal = () => {
+    if (!showSessionRpeModal) return null;
+    const traffic = getRpeTraffic(selectedSessionRpe);
+
+    return (
+      <Modal visible={showSessionRpeModal} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { maxWidth: 480 }]}>
+            <View style={styles.modalHeaderRow}>
+              <Text style={[styles.modalCategoryTag, { color: primaryColor }]}>
+                🚦 FIN DE SESIÓN · ESFUERZO GLOBAL
+              </Text>
+              <TouchableOpacity onPress={() => setShowSessionRpeModal(false)}>
+                <Text style={styles.modalCloseIcon}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalTitle}>¿Cuán duro te resultó el entrenamiento?</Text>
+            <Text style={{ color: '#94A3B8', fontSize: 13, marginBottom: 14, lineHeight: 18 }}>
+              Calificá en escala RPE del 1 al 10 el esfuerzo percibido de la sesión de hoy:
+            </Text>
+
+            {/* Selector 1 al 10 Semáforo */}
+            <View style={styles.sessionRpeGrid}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
+                const selected = selectedSessionRpe === num;
+                const itemTraffic = getRpeTraffic(num);
+                return (
+                  <TouchableOpacity
+                    key={num}
+                    style={[
+                      styles.sessionRpeChip,
+                      { borderColor: itemTraffic.color },
+                      selected && { backgroundColor: itemTraffic.color },
+                    ]}
+                    onPress={() => setSelectedSessionRpe(num)}
+                  >
+                    <Text
+                      style={[
+                        styles.sessionRpeChipText,
+                        selected ? { color: '#FFFFFF' } : { color: itemTraffic.textColor },
+                      ]}
+                    >
+                      {num}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <View style={[styles.sessionRpeSelectedBadge, { borderColor: traffic.color }]}>
+              <View style={[styles.semaforoDot, { backgroundColor: traffic.color }]} />
+              <Text style={[styles.sessionRpeSelectedText, { color: traffic.textColor }]}>
+                RPE {selectedSessionRpe} · {traffic.desc}
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
+              <TouchableOpacity
+                style={[styles.modalCancelBtn, { flex: 1 }]}
+                onPress={() => setShowSessionRpeModal(false)}
+              >
+                <Text style={styles.modalCancelText}>Volver</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalYoutubeBtn, { backgroundColor: '#10B981', flex: 2 }]}
+                onPress={async () => {
+                  setShowSessionRpeModal(false);
+                  const session = await finishActiveWorkout(selectedSessionRpe);
+                  if (session) {
+                    setFinishedSummaryModal({
+                      visible: true,
+                      session,
+                      copied: false,
+                    });
+                  } else {
+                    onWorkoutFinished();
+                  }
+                }}
+              >
+                <Text style={styles.modalYoutubeBtnText}>Confirmar y Guardar Sesión ✓</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   // Si aún no hay un entrenamiento en curso, mostramos la portada clara de "Mi Rutina"
   if (!activeWorkout) {
     return (
@@ -1037,22 +1161,83 @@ export function WorkoutLoggerScreen({
             </Text>
           </View>
         ) : (
-          myRoutine.days.map((day: RoutineDay) => (
-            <View key={day.dayId} style={styles.dayPreviewCard}>
-              <View style={styles.dayPreviewHeader}>
+          <>
+            {/* REGISTRO DE RECUPERACIÓN PREVIA (ESCALA 1 AL 10 ANTES DE ENTRENAR) */}
+            <View style={styles.recoveryPreCard}>
+              <View style={styles.recoveryPreHeader}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.dayPreviewTitle}>{day.name}</Text>
-                  <Text style={styles.dayPreviewCount}>
-                    {day.exercises.length} ejercicios en este día
+                  <Text style={styles.recoveryPreEyebrow}>ESTADO INICIAL DEL ATLETA</Text>
+                  <Text style={styles.recoveryPreTitle}>🔋 Registro de Recuperación Previa</Text>
+                  <Text style={styles.recoveryPreSub}>
+                    ¿Cuán recuperado estás de la sesión anterior? (1 = Muy fatigado · 10 = Al 100%)
                   </Text>
                 </View>
-                <TouchableOpacity
-                  style={[styles.startDayButton, { backgroundColor: primaryColor }]}
-                  onPress={() => startWorkoutDay(myRoutine, day)}
+                <View
+                  style={[
+                    styles.recoveryBadgeCircle,
+                    {
+                      backgroundColor: getRecoveryColor(preRecovery).bg,
+                      borderColor: getRecoveryColor(preRecovery).border,
+                    },
+                  ]}
                 >
-                  <Text style={styles.startDayButtonText}>Comenzar Día ▶</Text>
-                </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.recoveryBadgeCircleText,
+                      { color: getRecoveryColor(preRecovery).text },
+                    ]}
+                  >
+                    {preRecovery}/10
+                  </Text>
+                </View>
               </View>
+
+              <View style={styles.recoveryChipsRow}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
+                  const selected = preRecovery === num;
+                  const recColor = getRecoveryColor(num);
+                  return (
+                    <TouchableOpacity
+                      key={num}
+                      style={[
+                        styles.recoveryChip,
+                        { borderColor: recColor.border },
+                        selected && { backgroundColor: recColor.border },
+                      ]}
+                      onPress={() => setPreRecovery(num)}
+                    >
+                      <Text
+                        style={[
+                          styles.recoveryChipText,
+                          selected
+                            ? { color: '#FFFFFF', fontWeight: '800' }
+                            : { color: recColor.text },
+                        ]}
+                      >
+                        {num}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {myRoutine.days.map((day: RoutineDay) => (
+              <View key={day.dayId} style={styles.dayPreviewCard}>
+                <View style={styles.dayPreviewHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.dayPreviewTitle}>{day.name}</Text>
+                    <Text style={styles.dayPreviewCount}>
+                      {day.exercises.length} ejercicios en este día
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.startDayButton, { backgroundColor: primaryColor }]}
+                    onPress={() => startWorkoutDay(myRoutine, day, preRecovery)}
+                  >
+                    <Text style={styles.startDayButtonText}>Comenzar Día ▶</Text>
+                  </TouchableOpacity>
+                </View>
 
               {/* Agrupación en Entrada en Calor vs Bloque Principal mediante Segmentos Visuales */}
               {day.exercises.some((e) => e.blockType === 'warmup') && (
@@ -1200,8 +1385,9 @@ export function WorkoutLoggerScreen({
                 </View>
               )}
             </View>
-          ))
-        )}
+          ))}
+        </>
+      )}
       </ScrollView>
     );
   }
@@ -1223,17 +1409,19 @@ export function WorkoutLoggerScreen({
     (completedSetsCount / Math.max(1, totalSetsCount)) * 100
   );
 
-  const handleFinish = async () => {
-    const session = await finishActiveWorkout();
-    if (session) {
-      setFinishedSummaryModal({
-        visible: true,
-        session,
-        copied: false,
-      });
-    } else {
-      onWorkoutFinished();
-    }
+  const liveTotalEffectiveReps = activeWorkout.exercises.reduce((sum, ex) => {
+    return (
+      sum +
+      ex.sets.reduce((setSum, s) => {
+        if (!s.completed || s.type !== 'working') return setSum;
+        return setSum + (s.effectiveReps ?? calculateEffectiveReps(s.reps, s.rir, s.rpe));
+      }, 0)
+    );
+  }, 0);
+
+  const handleFinish = () => {
+    // Abrir modal interactivo para calificar el RPE de Sesión (1 al 10) solicitado
+    setShowSessionRpeModal(true);
   };
 
   return (
@@ -1241,6 +1429,7 @@ export function WorkoutLoggerScreen({
       {renderVideoModal()}
       {renderSubstituteModal()}
       {renderFinishedSummaryModal()}
+      {renderSessionRpeModal()}
 
       {/* Barra superior pegajosa del Workout Logger */}
       <View style={styles.loggerStickyHeader}>
@@ -1253,11 +1442,17 @@ export function WorkoutLoggerScreen({
             <Text style={styles.liveStatPill}>
               Avance:{' '}
               <Text style={styles.liveStatBold}>
-                {completedSetsCount}/{totalSetsCount} series ({completionPct}%)
+                {completedSetsCount}/{totalSetsCount} ({completionPct}%)
               </Text>
             </Text>
             <Text style={styles.liveStatPill}>
               Carga: <Text style={styles.liveStatBold}>{liveTotalVolume} kg</Text>
+            </Text>
+            <Text style={styles.liveStatPill}>
+              ⚡ Reps Efectivas: <Text style={[styles.liveStatBold, { color: '#10B981' }]}>{liveTotalEffectiveReps}</Text>
+            </Text>
+            <Text style={styles.liveStatPill}>
+              🔋 Recup: <Text style={styles.liveStatBold}>{activeWorkout.preWorkoutRecovery ?? 8}/10</Text>
             </Text>
           </View>
         </View>
@@ -2573,5 +2768,119 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.6,
+  },
+  // REPETICIONES EFECTIVAS EN CADA SERIE
+  setRowMetaLine: {
+    paddingLeft: 42,
+    marginTop: -2,
+    marginBottom: 6,
+  },
+  setRowMetaText: {
+    color: '#94A3B8',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  // REGISTRO DE RECUPERACIÓN PREVIA (1 AL 10)
+  recoveryPreCard: {
+    backgroundColor: '#0D131F',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#1E293D',
+    borderLeftWidth: 4,
+    borderLeftColor: '#06B6D4',
+    padding: 14,
+    marginBottom: 16,
+  },
+  recoveryPreHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    gap: 10,
+  },
+  recoveryPreEyebrow: {
+    color: '#06B6D4',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  recoveryPreTitle: {
+    color: '#F8FAFC',
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  recoveryPreSub: {
+    color: '#94A3B8',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  recoveryBadgeCircle: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recoveryBadgeCircleText: {
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  recoveryChipsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  recoveryChip: {
+    flex: 1,
+    minWidth: 26,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: '#131A26',
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recoveryChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  // REGISTRO DE RPE DE SESIÓN (1 AL 10 AL TERMINAR)
+  sessionRpeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  sessionRpeChip: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#131A26',
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sessionRpeChipText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  sessionRpeSelectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#0F172A',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  sessionRpeSelectedText: {
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
   },
 });
