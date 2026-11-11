@@ -157,18 +157,24 @@ function extractYouTubeId(url?: string): string | null {
 
 /**
  * Cronómetro aislado para evitar re-renderizar las tarjetas de ejercicios cada segundo.
+ * Protegido contra sesiones residuales antiguas (evita mostrar 10350 min si una sesión quedó abierta hace días).
  */
 const ElapsedTimerBadge = memo(({ startedAtMs }: { startedAtMs: number }) => {
+  // Si la sesión tiene más de 3 horas (10800s), normalizamos para que arranque limpia desde 00:00
+  const isStale = Date.now() - startedAtMs > 3 * 3600 * 1000;
+  const effectiveStart = isStale ? Date.now() : startedAtMs;
+
   const [elapsedSec, setElapsedSec] = useState(() =>
-    Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000))
+    Math.max(0, Math.floor((Date.now() - effectiveStart) / 1000))
   );
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setElapsedSec(Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000)));
+      const diff = Math.max(0, Math.floor((Date.now() - effectiveStart) / 1000));
+      setElapsedSec(Math.min(7200, diff));
     }, 1000);
     return () => clearInterval(interval);
-  }, [startedAtMs]);
+  }, [effectiveStart]);
 
   const mins = Math.floor(elapsedSec / 60);
   const secs = elapsedSec % 60;

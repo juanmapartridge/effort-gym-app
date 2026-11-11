@@ -35,11 +35,13 @@ export default function App() {
     setActiveTab(defaultTab);
   };
 
+  const isCoachMode = currentUser.role === 'coach';
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#090D14" />
 
-      {/* Barra Superior Minimalista */}
+      {/* Barra Superior con Selector de Rol Cristalino y Profesional */}
       <View style={styles.topTenantBar}>
         <View style={styles.appContainer}>
           <View style={styles.brandRow}>
@@ -48,24 +50,27 @@ export default function App() {
               <View>
                 <Text style={styles.gymNameText}>EFFORT GYM</Text>
                 <Text style={styles.tenantSubText}>
-                  {currentUser.role === 'coach'
-                    ? 'Director: Gian Boasso'
-                    : `Atleta: ${currentUser.displayName}`}
+                  {isCoachMode
+                    ? 'Director: Gian Boasso · Panel de Gestión'
+                    : `Socio en Sala: ${currentUser.displayName}`}
                 </Text>
               </View>
             </View>
 
             <TouchableOpacity style={styles.resetDemoBtn} onPress={resetDemoData}>
-              <Text style={styles.resetDemoBtnText}>↺ Restaurar</Text>
+              <Text style={styles.resetDemoBtnText}>↺ Reiniciar Demo</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Selector de Perfil Sobrio */}
-          <View style={styles.demoSwitcherRow}>
+          {/* Selector de Modo Dedicado: Entrenador vs Alumno */}
+          <View style={styles.modeSwitchContainer}>
             <TouchableOpacity
               style={[
-                styles.profilePill,
-                currentUserId === 'usr_coach_1' && styles.profilePillActive,
+                styles.modeSwitchBtn,
+                isCoachMode && {
+                  backgroundColor: '#1E293D',
+                  borderColor: primaryColor,
+                },
               ]}
               onPress={() =>
                 handleSwitchTenantProfile('gym_effort', 'usr_coach_1', 'coach')
@@ -73,18 +78,21 @@ export default function App() {
             >
               <Text
                 style={[
-                  styles.profilePillText,
-                  currentUserId === 'usr_coach_1' && styles.profilePillTextActive,
+                  styles.modeSwitchBtnText,
+                  isCoachMode && { color: '#FFFFFF', fontWeight: '800' },
                 ]}
               >
-                Profe: Gian Boasso
+                👔 Panel del Profesor (Gian)
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
-                styles.profilePill,
-                currentUserId === 'usr_athlete_1' && styles.profilePillActive,
+                styles.modeSwitchBtn,
+                !isCoachMode && {
+                  backgroundColor: '#1E293D',
+                  borderColor: primaryColor,
+                },
               ]}
               onPress={() =>
                 handleSwitchTenantProfile('gym_effort', 'usr_athlete_1', 'logger')
@@ -92,33 +100,58 @@ export default function App() {
             >
               <Text
                 style={[
-                  styles.profilePillText,
-                  currentUserId === 'usr_athlete_1' && styles.profilePillTextActive,
+                  styles.modeSwitchBtnText,
+                  !isCoachMode && { color: '#FFFFFF', fontWeight: '800' },
                 ]}
               >
-                Alumno: Martín
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.profilePill,
-                currentUserId === 'usr_athlete_2' && styles.profilePillActive,
-              ]}
-              onPress={() =>
-                handleSwitchTenantProfile('gym_effort', 'usr_athlete_2', 'logger')
-              }
-            >
-              <Text
-                style={[
-                  styles.profilePillText,
-                  currentUserId === 'usr_athlete_2' && styles.profilePillTextActive,
-                ]}
-              >
-                Alumna: Sofía
+                📱 App del Alumno (Socio)
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Sub-selector de Atleta si está en Modo Alumno */}
+          {!isCoachMode && (
+            <View style={styles.athleteSwitcherRow}>
+              <Text style={styles.athleteSwitcherLabel}>Simular socio:</Text>
+              <TouchableOpacity
+                style={[
+                  styles.profilePill,
+                  currentUserId === 'usr_athlete_1' && styles.profilePillActive,
+                ]}
+                onPress={() =>
+                  handleSwitchTenantProfile('gym_effort', 'usr_athlete_1', 'logger')
+                }
+              >
+                <Text
+                  style={[
+                    styles.profilePillText,
+                    currentUserId === 'usr_athlete_1' && styles.profilePillTextActive,
+                  ]}
+                >
+                  Martín Echeverría
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.profilePill,
+                  currentUserId === 'usr_athlete_2' && styles.profilePillActive,
+                ]}
+                onPress={() =>
+                  handleSwitchTenantProfile('gym_effort', 'usr_athlete_2', 'logger')
+                }
+              >
+                <Text
+                  style={[
+                    styles.profilePillText,
+                    currentUserId === 'usr_athlete_2' && styles.profilePillTextActive,
+                  ]}
+                >
+                  Sofía Martínez
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
 
@@ -165,7 +198,7 @@ export default function App() {
                     activeTab === 'coach' && { color: primaryColor, fontWeight: '800' },
                   ]}
                 >
-                  Panel Profe
+                  📋 Alumnos & Rutinas
                 </Text>
                 {activeTab === 'coach' && (
                   <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />
@@ -182,7 +215,7 @@ export default function App() {
                     activeTab === 'analytics' && { color: primaryColor, fontWeight: '800' },
                   ]}
                 >
-                  Gráficos de Carga
+                  📊 Auditoría Científica
                 </Text>
                 {activeTab === 'analytics' && (
                   <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />
@@ -191,19 +224,13 @@ export default function App() {
 
               <TouchableOpacity
                 style={styles.navTab}
-                onPress={() => setActiveTab('logger')}
+                onPress={() =>
+                  handleSwitchTenantProfile('gym_effort', 'usr_athlete_1', 'logger')
+                }
               >
-                <Text
-                  style={[
-                    styles.navTabLabel,
-                    activeTab === 'logger' && { color: primaryColor, fontWeight: '800' },
-                  ]}
-                >
-                  Vista Alumno
+                <Text style={styles.navTabLabel}>
+                  📱 Probar App Alumno
                 </Text>
-                {activeTab === 'logger' && (
-                  <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />
-                )}
               </TouchableOpacity>
             </>
           ) : (
@@ -218,7 +245,7 @@ export default function App() {
                     activeTab === 'logger' && { color: primaryColor, fontWeight: '800' },
                   ]}
                 >
-                  Mi Rutina Hoy
+                  🏋️ Mi Entrenamiento
                 </Text>
                 {activeTab === 'logger' && (
                   <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />
@@ -235,7 +262,7 @@ export default function App() {
                     activeTab === 'analytics' && { color: primaryColor, fontWeight: '800' },
                   ]}
                 >
-                  Mi Evolución
+                  📈 Mi Progreso
                 </Text>
                 {activeTab === 'analytics' && (
                   <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />
@@ -244,19 +271,13 @@ export default function App() {
 
               <TouchableOpacity
                 style={styles.navTab}
-                onPress={() => setActiveTab('coach')}
+                onPress={() =>
+                  handleSwitchTenantProfile('gym_effort', 'usr_coach_1', 'coach')
+                }
               >
-                <Text
-                  style={[
-                    styles.navTabLabel,
-                    activeTab === 'coach' && { color: primaryColor, fontWeight: '800' },
-                  ]}
-                >
-                  Volver a Profe
+                <Text style={[styles.navTabLabel, { color: '#F59E0B', fontWeight: '800' }]}>
+                  👔 Volver a Profe
                 </Text>
-                {activeTab === 'coach' && (
-                  <View style={[styles.navActiveIndicator, { backgroundColor: primaryColor }]} />
-                )}
               </TouchableOpacity>
             </>
           )}
@@ -322,6 +343,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  modeSwitchContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  modeSwitchBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#0D131F',
+    borderWidth: 1.5,
+    borderColor: '#1E293D',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeSwitchBtnText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  athleteSwitcherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#1E293D',
+  },
+  athleteSwitcherLabel: {
+    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '700',
   },
   profilePill: {
     paddingHorizontal: 12,

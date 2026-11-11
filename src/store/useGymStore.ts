@@ -503,10 +503,9 @@ export const useGymStore = create<GymStoreState>()(
             : avgSessionRpe;
 
         const nowIso = new Date().toISOString();
-        const durationSeconds = Math.max(
-          60,
-          Math.round((Date.now() - draft.startedAtMs) / 1000)
-        );
+        const rawDuration = Math.round((Date.now() - draft.startedAtMs) / 1000);
+        // Si la sesión quedó abierta hace días, guardamos una duración realista de entrenamiento (50 min = 3000s)
+        const durationSeconds = rawDuration > 3 * 3600 ? 3000 : Math.max(60, rawDuration);
 
         const newSession: WorkoutSession = {
           id: `sess_${Date.now()}`,
@@ -720,6 +719,14 @@ export const useGymStore = create<GymStoreState>()(
     {
       name: 'effort-gym-storage-v1',
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state && state.activeWorkout) {
+          // Si la sesión guardada tiene más de 3 horas, descartarla para que arranque limpio
+          if (Date.now() - state.activeWorkout.startedAtMs > 3 * 3600 * 1000) {
+            state.activeWorkout = null;
+          }
+        }
+      },
     }
   )
 );
