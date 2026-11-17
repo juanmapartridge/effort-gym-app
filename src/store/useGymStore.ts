@@ -83,6 +83,16 @@ interface GymStoreState {
   finishActiveWorkout: (sessionRpe?: number) => Promise<WorkoutSession | null>;
   discardActiveWorkout: () => void;
   substituteExerciseInActiveWorkout: (exerciseIndex: number, newExerciseId: string) => void;
+  addExerciseToActiveWorkout: (exercise: {
+    id?: string;
+    name: string;
+    muscleGroup: string;
+    targetSets?: number;
+    defaultWeight?: number;
+    defaultReps?: number;
+    blockType?: 'warmup' | 'main';
+  }) => void;
+  startFreeWorkout: (sessionName?: string, preWorkoutRecovery?: number) => void;
 
   // Acciones del Profesor / Coach (Planificación y Monitoreo)
   assignTemplateToAthlete: (templateId: string, athleteId: string) => UserRoutine | null;
@@ -458,6 +468,81 @@ export const useGymStore = create<GymStoreState>()(
         set({
           activeWorkout: { ...current, exercises },
           lastSavedBanner: `Ejercicio reemplazado por "${catalogEx.name}" en tu sesión de hoy.`,
+        });
+      },
+
+      startFreeWorkout: (sessionName = 'Sesión Libre en Sala', preWorkoutRecovery = 8) => {
+        set({
+          activeWorkout: {
+            userRoutineId: 'routine_free',
+            dayId: `day_free_${Date.now()}`,
+            dayName: sessionName,
+            startedAtMs: Date.now(),
+            exercises: [],
+            restTimerEndMs: null,
+            activeRestDurationSec: 90,
+            preWorkoutRecovery,
+            sessionRpe: undefined,
+          },
+          lastSavedBanner: 'Sesión libre iniciada. Ya podés agregar tus ejercicios.',
+        });
+      },
+
+      addExerciseToActiveWorkout: (exercise) => {
+        const current = get().activeWorkout;
+        if (!current) return;
+        const numSets = exercise.targetSets || 3;
+        const weight = exercise.defaultWeight || 50;
+        const reps = exercise.defaultReps || 10;
+        const rpe = 8;
+        const rir = 2;
+        const effReps = calculateEffectiveReps(reps, rir, rpe);
+        const exerciseId = exercise.id || `custom_ex_${Date.now()}`;
+
+        const sets: LoggedSet[] = Array.from({ length: numSets }).map((_, idx) => ({
+          id: `set_${exerciseId}_${idx + 1}_${Date.now()}`,
+          setNumber: idx + 1,
+          type: 'working',
+          weight,
+          reps,
+          rpe,
+          rir,
+          effectiveReps: effReps,
+          completed: false,
+        }));
+
+        const isWarmup =
+          exercise.blockType === 'warmup' ||
+          exercise.muscleGroup.toUpperCase().includes('MOVILIDAD') ||
+          exercise.muscleGroup.toUpperCase().includes('LUMBOPELVICA');
+
+        const newExercise: LoggedExercise = {
+          exerciseId,
+          exerciseName: exercise.name,
+          muscleGroup: exercise.muscleGroup,
+          targetReps: `${reps}`,
+          targetRpe: rpe,
+          targetRir: rir,
+          restSeconds: 90,
+          blockType: exercise.blockType || (isWarmup ? 'warmup' : 'main'),
+          exerciseTier: inferExerciseTier(exercise.name, exercise.muscleGroup),
+          bodyZone: inferBodyZone(exercise.muscleGroup),
+          sets,
+          metrics: {
+            totalVolumeKg: 0,
+            maxWeightKg: 0,
+            estimated1RM: 0,
+            averageRpe: 0,
+            totalEffectiveReps: 0,
+          },
+        };
+
+        set({
+          activeWorkout: {
+            ...current,
+            exercises: [...current.exercises, newExercise],
+          },
+          lastSavedBanner: `Ejercicio "${exercise.name}" agregado a tu sesión.`,
         });
       },
 

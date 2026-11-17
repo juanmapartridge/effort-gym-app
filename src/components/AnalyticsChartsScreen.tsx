@@ -60,6 +60,7 @@ export function AthleteLoadAnalyticsPanel({
 
   const [activeTab, setActiveTab] = useState<AnalyticsTabKey>('cargas');
   const [barVariable, setBarVariable] = useState<BarVariableKey>('kg');
+  const [barExerciseId, setBarExerciseId] = useState<string>('all');
   const [timeScope, setTimeScope] = useState<'weekly' | 'monthly'>('weekly');
   const [pieMode, setPieMode] = useState<'zones' | 'tiers'>('zones');
   const [pieTimeFilter, setPieTimeFilter] = useState<'all' | 'monthly' | 'weekly'>('all');
@@ -223,6 +224,7 @@ export function AthleteLoadAnalyticsPanel({
 
   // =========================================================================
   // 2. DATOS PARA EL GRÁFICO DE BARRAS (KG, RPE, RECUPERACIÓN - SEMANAL O MENSUAL)
+  // Permite ver tanto Carga Total de la Sesión como la evolución de un EJERCICIO ESPECÍFICO en barras (solicitado por Gian Boasso).
   // =========================================================================
   const barChartData = useMemo(() => {
     if (timeScope === 'weekly') {
@@ -233,8 +235,24 @@ export function AthleteLoadAnalyticsPanel({
         let frontColor = primaryColor;
 
         if (barVariable === 'kg') {
-          value = Math.round(sess.totalVolumeKg);
-          topText = `${value} kg`;
+          if (barExerciseId === 'all') {
+            value = Math.round(sess.totalVolumeKg);
+            topText = `${value} kg`;
+          } else {
+            const exInSession = sess.exercises.find((e) => e.exerciseId === barExerciseId);
+            if (exInSession) {
+              value = Math.round(
+                exInSession.metrics.maxWeightKg ||
+                  (exInSession.sets.length > 0
+                    ? Math.max(...exInSession.sets.map((s) => s.weight))
+                    : 0)
+              );
+              topText = `${value} kg`;
+            } else {
+              value = 0;
+              topText = '-';
+            }
+          }
           frontColor = primaryColor;
         } else if (barVariable === 'rpe') {
           value = sess.sessionRpe ?? sess.averageSessionRpe;
@@ -271,11 +289,24 @@ export function AthleteLoadAnalyticsPanel({
         const prev = byMonth.get(m) || { sumKg: 0, sumRpe: 0, sumRec: 0, count: 0 };
         const sRpe = s.sessionRpe ?? s.averageSessionRpe;
         const sRec = s.preWorkoutRecovery ?? 8;
+
+        let kgContribution = s.totalVolumeKg;
+        let countInc = 1;
+        if (barVariable === 'kg' && barExerciseId !== 'all') {
+          const exInSession = s.exercises.find((e) => e.exerciseId === barExerciseId);
+          if (exInSession) {
+            kgContribution = exInSession.metrics.maxWeightKg || 0;
+          } else {
+            kgContribution = 0;
+            countInc = 0;
+          }
+        }
+
         byMonth.set(m, {
-          sumKg: prev.sumKg + s.totalVolumeKg,
+          sumKg: prev.sumKg + kgContribution,
           sumRpe: prev.sumRpe + sRpe,
           sumRec: prev.sumRec + sRec,
-          count: prev.count + 1,
+          count: prev.count + countInc,
         });
       });
 
@@ -289,7 +320,7 @@ export function AthleteLoadAnalyticsPanel({
 
         if (barVariable === 'kg') {
           value = Math.round(data.sumKg / Math.max(1, data.count));
-          topText = `${value} kg/ses`;
+          topText = barExerciseId === 'all' ? `${value} kg/ses` : `${value} kg`;
           frontColor = primaryColor;
         } else if (barVariable === 'rpe') {
           value = Math.round((data.sumRpe / Math.max(1, data.count)) * 10) / 10;
@@ -309,21 +340,46 @@ export function AthleteLoadAnalyticsPanel({
         };
       });
     }
-  }, [athleteSessions, timeScope, barVariable, selectedSessionId, primaryColor]);
+  }, [athleteSessions, timeScope, barVariable, barExerciseId, selectedSessionId, primaryColor]);
 
   // Promedios generales de KPIs
   const overallAverages = useMemo(() => {
-    if (athleteSessions.length === 0) return { avgKg: 0, avgRpe: 0, avgRecovery: 0 };
+    if (athleteSessions.length === 0) {
+      return { avgKg: 0, avgRpe: 0, avgRecovery: 0, maxExKg: 0, exRepsEff: 0, exRpeAvg: 0 };
+    }
     const totalKg = athleteSessions.reduce((sum, s) => sum + s.totalVolumeKg, 0);
     const totalRpe = athleteSessions.reduce((sum, s) => sum + (s.sessionRpe ?? s.averageSessionRpe), 0);
     const totalRec = athleteSessions.reduce((sum, s) => sum + (s.preWorkoutRecovery ?? 8), 0);
     const n = athleteSessions.length;
+
+    let maxExKg = 0;
+    let exRepsEff = 0;
+    let exRpeSum = 0;
+    let exRpeCount = 0;
+
+    if (barExerciseId !== 'all') {
+      athleteSessions.forEach((s) => {
+        const ex = s.exercises.find((e) => e.exerciseId === barExerciseId);
+        if (ex) {
+          if (ex.metrics.maxWeightKg > maxExKg) maxExKg = ex.metrics.maxWeightKg;
+          exRepsEff += ex.metrics.totalEffectiveReps || 0;
+          if (ex.metrics.averageRpe > 0) {
+            exRpeSum += ex.metrics.averageRpe;
+            exRpeCount += 1;
+          }
+        }
+      });
+    }
+
     return {
       avgKg: Math.round(totalKg / n),
       avgRpe: Math.round((totalRpe / n) * 10) / 10,
       avgRecovery: Math.round((totalRec / n) * 10) / 10,
+      maxExKg,
+      exRepsEff,
+      exRpeAvg: exRpeCount > 0 ? Math.round((exRpeSum / exRpeCount) * 10) / 10 : 0,
     };
-  }, [athleteSessions]);
+  }, [athleteSessions, barExerciseId]);
 
   // =========================================================================
   // 3. GRÁFICOS DE TORTA (ZONAS CORPORALES & TIPOS DE EJERCICIO)
@@ -729,7 +785,7 @@ export function AthleteLoadAnalyticsPanel({
                 onPress={() => setBarVariable('kg')}
               >
                 <Text style={[styles.filterPillText, barVariable === 'kg' && { color: '#FFF' }]}>
-                  🏋️ Carga Total (KG)
+                  🏋️ Carga en Kilos (KG)
                 </Text>
               </TouchableOpacity>
 
@@ -757,6 +813,62 @@ export function AthleteLoadAnalyticsPanel({
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* Selector de Ejercicio para el Gráfico de Barras (Solicitud expresa de Gian Boasso en Audio 3) */}
+            {barVariable === 'kg' && (
+              <View style={styles.barExSelectorContainer}>
+                <View style={styles.barExSelectorHeader}>
+                  <Text style={styles.barExSelectorLabel}>
+                    🎯 VER BARRAS DE UN EJERCICIO ESPECÍFICO (SOLICITADO POR GIAN):
+                  </Text>
+                  {barExerciseId !== 'all' && (
+                    <TouchableOpacity onPress={() => setBarExerciseId('all')}>
+                      <Text style={[styles.barExResetText, { color: primaryColor }]}>Ver Todo el Volumen</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 4 }}>
+                  <TouchableOpacity
+                    style={[
+                      styles.exChip,
+                      barExerciseId === 'all' && { backgroundColor: primaryColor, borderColor: primaryColor },
+                    ]}
+                    onPress={() => setBarExerciseId('all')}
+                  >
+                    <Text
+                      style={[
+                        styles.exChipText,
+                        barExerciseId === 'all' && { color: '#FFF', fontWeight: '800' },
+                      ]}
+                    >
+                      🌐 Volumen Total Sesión
+                    </Text>
+                  </TouchableOpacity>
+                  {loggedExercises.map((ex) => {
+                    const isSelected = barExerciseId === ex.id;
+                    return (
+                      <TouchableOpacity
+                        key={ex.id}
+                        style={[
+                          styles.exChip,
+                          isSelected && { backgroundColor: primaryColor, borderColor: primaryColor },
+                        ]}
+                        onPress={() => setBarExerciseId(ex.id)}
+                      >
+                        <Text
+                          style={[
+                            styles.exChipText,
+                            isSelected && { color: '#FFF', fontWeight: '800' },
+                          ]}
+                        >
+                          {ex.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
 
             {/* Switch Semanal vs Mensual */}
             <View style={styles.scopeSwitcherRow}>
@@ -797,26 +909,50 @@ export function AthleteLoadAnalyticsPanel({
               />
             </View>
 
-            {/* Tarjetas de Promedios Generales */}
-            <View style={styles.threeKpiRow}>
-              <View style={styles.miniKpiCard}>
-                <Text style={styles.miniKpiLabel}>CARGA PROM/SESIÓN</Text>
-                <Text style={[styles.miniKpiValue, { color: primaryColor }]}>{overallAverages.avgKg} kg</Text>
-                <Text style={styles.miniKpiSub}>Volumen promedio</Text>
-              </View>
+            {/* Tarjetas de Promedios Generales o de Ejercicio Específico */}
+            {barVariable === 'kg' && barExerciseId !== 'all' ? (
+              <View style={styles.threeKpiRow}>
+                <View style={styles.miniKpiCard}>
+                  <Text style={styles.miniKpiLabel}>CARGA MÁXIMA</Text>
+                  <Text style={[styles.miniKpiValue, { color: primaryColor }]}>{overallAverages.maxExKg} kg</Text>
+                  <Text style={styles.miniKpiSub} numberOfLines={1}>
+                    {loggedExercises.find((e) => e.id === barExerciseId)?.name || 'Ejercicio'}
+                  </Text>
+                </View>
 
-              <View style={styles.miniKpiCard}>
-                <Text style={styles.miniKpiLabel}>RPE PROMEDIO</Text>
-                <Text style={[styles.miniKpiValue, { color: '#FBBF24' }]}>{overallAverages.avgRpe}</Text>
-                <Text style={styles.miniKpiSub}>Escala 1 al 10</Text>
-              </View>
+                <View style={styles.miniKpiCard}>
+                  <Text style={styles.miniKpiLabel}>RPE PROM. EJERCICIO</Text>
+                  <Text style={[styles.miniKpiValue, { color: '#FBBF24' }]}>{overallAverages.exRpeAvg}</Text>
+                  <Text style={styles.miniKpiSub}>Intensidad media</Text>
+                </View>
 
-              <View style={styles.miniKpiCard}>
-                <Text style={styles.miniKpiLabel}>RECUPERACIÓN</Text>
-                <Text style={[styles.miniKpiValue, { color: '#06B6D4' }]}>{overallAverages.avgRecovery}/10</Text>
-                <Text style={styles.miniKpiSub}>Promedio pre-entreno</Text>
+                <View style={styles.miniKpiCard}>
+                  <Text style={styles.miniKpiLabel}>REPS EFECTIVAS</Text>
+                  <Text style={[styles.miniKpiValue, { color: '#10B981' }]}>{overallAverages.exRepsEff}</Text>
+                  <Text style={styles.miniKpiSub}>Total RIR ≤ 4</Text>
+                </View>
               </View>
-            </View>
+            ) : (
+              <View style={styles.threeKpiRow}>
+                <View style={styles.miniKpiCard}>
+                  <Text style={styles.miniKpiLabel}>CARGA PROM/SESIÓN</Text>
+                  <Text style={[styles.miniKpiValue, { color: primaryColor }]}>{overallAverages.avgKg} kg</Text>
+                  <Text style={styles.miniKpiSub}>Volumen promedio</Text>
+                </View>
+
+                <View style={styles.miniKpiCard}>
+                  <Text style={styles.miniKpiLabel}>RPE PROMEDIO</Text>
+                  <Text style={[styles.miniKpiValue, { color: '#FBBF24' }]}>{overallAverages.avgRpe}</Text>
+                  <Text style={styles.miniKpiSub}>Escala 1 al 10</Text>
+                </View>
+
+                <View style={styles.miniKpiCard}>
+                  <Text style={styles.miniKpiLabel}>RECUPERACIÓN</Text>
+                  <Text style={[styles.miniKpiValue, { color: '#06B6D4' }]}>{overallAverages.avgRecovery}/10</Text>
+                  <Text style={styles.miniKpiSub}>Promedio pre-entreno</Text>
+                </View>
+              </View>
+            )}
           </View>
         </View>
       )}
@@ -1240,6 +1376,30 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontSize: 12,
     fontWeight: '600',
+  },
+  barExSelectorContainer: {
+    backgroundColor: '#090D14',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#1E293D',
+    marginVertical: 8,
+  },
+  barExSelectorHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  barExSelectorLabel: {
+    color: '#94A3B8',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  barExResetText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   kpiRow: {
     flexDirection: 'row',

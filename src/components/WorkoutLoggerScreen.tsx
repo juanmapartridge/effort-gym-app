@@ -680,6 +680,8 @@ export function WorkoutLoggerScreen({
   const substituteExerciseInActiveWorkout = useGymStore(
     (s) => s.substituteExerciseInActiveWorkout
   );
+  const addExerciseToActiveWorkout = useGymStore((s) => s.addExerciseToActiveWorkout);
+  const startFreeWorkout = useGymStore((s) => s.startFreeWorkout);
 
   const [videoModal, setVideoModal] = useState<VideoModalState>({
     visible: false,
@@ -697,6 +699,20 @@ export function WorkoutLoggerScreen({
     exerciseIndex: 0,
     currentExercise: null,
     search: '',
+  });
+
+  const [addExerciseModal, setAddExerciseModal] = useState<{
+    visible: boolean;
+    search: string;
+    selectedGroup: string;
+    customName: string;
+    customGroup: string;
+  }>({
+    visible: false,
+    search: '',
+    selectedGroup: 'TODOS',
+    customName: '',
+    customGroup: 'Pecho',
   });
 
   const [finishedSummaryModal, setFinishedSummaryModal] = useState<{
@@ -938,6 +954,163 @@ export function WorkoutLoggerScreen({
     );
   };
 
+  const renderAddExerciseModal = () => {
+    if (!addExerciseModal.visible) return null;
+
+    const filteredCatalog = exercisesCatalog.filter((e) => {
+      const matchSearch =
+        !addExerciseModal.search.trim() ||
+        e.name.toLowerCase().includes(addExerciseModal.search.toLowerCase()) ||
+        e.muscleGroup.toLowerCase().includes(addExerciseModal.search.toLowerCase());
+      const matchGroup =
+        addExerciseModal.selectedGroup === 'TODOS' ||
+        e.muscleGroup.toUpperCase().includes(addExerciseModal.selectedGroup.toUpperCase());
+      return matchSearch && matchGroup;
+    });
+
+    const muscleGroups = ['TODOS', 'Pecho', 'Espalda', 'Piernas', 'Hombros', 'Brazos', 'Core'];
+
+    return (
+      <Modal
+        visible={addExerciseModal.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAddExerciseModal((prev) => ({ ...prev, visible: false }))}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { maxHeight: '88%' }]}>
+            <View style={styles.modalHeaderRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.modalCategoryTag, { color: primaryColor }]}>
+                  AGREGAR EJERCICIO A LA SESIÓN
+                </Text>
+                <Text style={styles.modalTitle}>Elige del catálogo o escribe uno nuevo</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setAddExerciseModal((prev) => ({ ...prev, visible: false }))}
+              >
+                <Text style={styles.modalCloseIcon}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Buscador Rápido */}
+            <TextInput
+              style={styles.modalSearchInput}
+              placeholder="🔍 Buscar ejercicio (ej: Press banca, Sentadilla)..."
+              placeholderTextColor="#64748B"
+              value={addExerciseModal.search}
+              onChangeText={(text) => setAddExerciseModal((prev) => ({ ...prev, search: text }))}
+            />
+
+            {/* Chips de filtro por grupo muscular */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginVertical: 6, maxHeight: 38 }}
+            >
+              {muscleGroups.map((grp) => {
+                const active = addExerciseModal.selectedGroup === grp;
+                return (
+                  <TouchableOpacity
+                    key={grp}
+                    style={[
+                      styles.groupFilterChip,
+                      active && { backgroundColor: primaryColor, borderColor: primaryColor },
+                    ]}
+                    onPress={() => setAddExerciseModal((prev) => ({ ...prev, selectedGroup: grp }))}
+                  >
+                    <Text
+                      style={[
+                        styles.groupFilterChipText,
+                        active && { color: '#FFF', fontWeight: '800' },
+                      ]}
+                    >
+                      {grp}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Lista del catálogo */}
+            <ScrollView style={{ maxHeight: 220, marginVertical: 6 }}>
+              {filteredCatalog.length > 0 ? (
+                filteredCatalog.slice(0, 20).map((ex) => (
+                  <TouchableOpacity
+                    key={ex.id}
+                    style={styles.substituteItem}
+                    onPress={() => {
+                      addExerciseToActiveWorkout({
+                        id: ex.id,
+                        name: ex.name,
+                        muscleGroup: ex.muscleGroup,
+                        targetSets: 3,
+                        defaultWeight: 50,
+                        defaultReps: 10,
+                      });
+                      setAddExerciseModal((prev) => ({ ...prev, visible: false }));
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.substituteItemName}>{ex.name}</Text>
+                      <Text style={styles.substituteItemMeta}>
+                        {ex.muscleGroup} · {ex.equipment}
+                      </Text>
+                    </View>
+                    <Text style={[styles.selectAltText, { color: primaryColor, fontWeight: '800' }]}>
+                      + Agregar ▶
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={{ color: '#64748B', fontSize: 12, textAlign: 'center', padding: 12 }}>
+                  No se encontraron ejercicios en el catálogo con esa búsqueda.
+                </Text>
+              )}
+            </ScrollView>
+
+            {/* Opción libre: Escribir nombre libre */}
+            <View style={styles.customAddExBox}>
+              <Text style={styles.customAddExTitle}>✏️ O escribe cualquier ejercicio libre:</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+                <TextInput
+                  style={[styles.modalSearchInput, { flex: 1, marginBottom: 0 }]}
+                  placeholder="Nombre libre (ej: Prensa 45°)..."
+                  placeholderTextColor="#64748B"
+                  value={addExerciseModal.customName}
+                  onChangeText={(t) => setAddExerciseModal((p) => ({ ...p, customName: t }))}
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.addCustomBtn,
+                    { backgroundColor: addExerciseModal.customName.trim() ? '#10B981' : '#374151' },
+                  ]}
+                  disabled={!addExerciseModal.customName.trim()}
+                  onPress={() => {
+                    if (!addExerciseModal.customName.trim()) return;
+                    addExerciseToActiveWorkout({
+                      name: addExerciseModal.customName.trim(),
+                      muscleGroup:
+                        addExerciseModal.selectedGroup !== 'TODOS'
+                          ? addExerciseModal.selectedGroup
+                          : 'General',
+                      targetSets: 3,
+                      defaultWeight: 40,
+                      defaultReps: 10,
+                    });
+                    setAddExerciseModal((prev) => ({ ...prev, visible: false, customName: '' }));
+                  }}
+                >
+                  <Text style={styles.addCustomBtnText}>+ Añadir</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
   const renderFinishedSummaryModal = () => {
     if (!finishedSummaryModal.visible || !finishedSummaryModal.session) return null;
     const session = finishedSummaryModal.session;
@@ -1160,11 +1333,19 @@ export function WorkoutLoggerScreen({
 
         {!myRoutine ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyCardText}>
-              Si estás viendo el perfil de Profesor (Gian Boasso), toca arriba en "🏃 Alumno:
-              Martín Echeverría" para simular cómo entrena un alumno en su celular, o ve a "📋
-              Panel Profesor" para gestionar sus rutinas.
+            <Text style={[styles.emptyCardTitle, { color: primaryColor }]}>
+              💡 Sesión Libre en Sala (Sin Rutina Previa)
             </Text>
+            <Text style={styles.emptyCardText}>
+              Aún no tienes una plantilla predefinida asignada por el profesor Gian Boasso, pero ya podés
+              iniciar tu entrenamiento en sala, buscar o escribir tus ejercicios, y anotar tus marcas de hoy.
+            </Text>
+            <TouchableOpacity
+              style={[styles.startFreeWorkoutBtn, { backgroundColor: primaryColor }]}
+              onPress={() => startFreeWorkout('Sesión Libre en Sala', preRecovery)}
+            >
+              <Text style={styles.startFreeWorkoutBtnText}>⚡ Iniciar Sesión Libre en Sala ▶</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <>
@@ -1392,6 +1573,22 @@ export function WorkoutLoggerScreen({
               )}
             </View>
           ))}
+
+          {/* Registro Rápido Libre en Sala (solicitado por Gian en Audios 4 y 5) */}
+          <TouchableOpacity
+            style={styles.openFreeSessionCardBtn}
+            onPress={() => startFreeWorkout('Sesión Libre en Sala', preRecovery)}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.openFreeSessionTitle}>⚡ ¿Querés entrenar libre hoy?</Text>
+              <Text style={styles.openFreeSessionSub}>
+                Iniciá una sesión en sala y agregá los ejercicios que quieras sobre la marcha
+              </Text>
+            </View>
+            <View style={[styles.openFreeSessionBadge, { backgroundColor: primaryColor }]}>
+              <Text style={styles.openFreeSessionBadgeText}>Sesión Libre ▶</Text>
+            </View>
+          </TouchableOpacity>
         </>
       )}
       </ScrollView>
@@ -1425,15 +1622,25 @@ export function WorkoutLoggerScreen({
     );
   }, 0);
 
-  const handleFinish = () => {
-    // Abrir modal interactivo para calificar el RPE de Sesión (1 al 10) solicitado
-    setShowSessionRpeModal(true);
+  const handleFinish = async () => {
+    // Guarda directamente con el RPE de Sesión (1 al 10) seleccionado en la solapa
+    const session = await finishActiveWorkout(selectedSessionRpe);
+    if (session) {
+      setFinishedSummaryModal({
+        visible: true,
+        session,
+        copied: false,
+      });
+    } else {
+      onWorkoutFinished();
+    }
   };
 
   return (
     <View style={styles.container}>
       {renderVideoModal()}
       {renderSubstituteModal()}
+      {renderAddExerciseModal()}
       {renderFinishedSummaryModal()}
       {renderSessionRpeModal()}
 
@@ -1587,6 +1794,122 @@ export function WorkoutLoggerScreen({
             })}
           </View>
         )}
+
+        {/* Caso: Sesión libre iniciada sin ejercicios aún */}
+        {activeWorkout.exercises.length === 0 && (
+          <View style={styles.emptyActiveWorkoutBox}>
+            <Text style={styles.emptyActiveWorkoutTitle}>⚡ Sesión Libre en Sala</Text>
+            <Text style={styles.emptyActiveWorkoutSub}>
+              Aún no agregaste ejercicios a esta sesión. Tocá el botón de abajo para buscar en el
+              catálogo o escribir los ejercicios que vas a realizar hoy.
+            </Text>
+          </View>
+        )}
+
+        {/* BOTÓN PARA AGREGAR EJERCICIO A LA SESIÓN EN VIVO (SOLICITADO POR GIAN EN AUDIOS 4 Y 5) */}
+        <TouchableOpacity
+          style={[styles.addExSessionBtn, { borderColor: primaryColor }]}
+          onPress={() =>
+            setAddExerciseModal({
+              visible: true,
+              search: '',
+              selectedGroup: 'TODOS',
+              customName: '',
+              customGroup: 'Pecho',
+            })
+          }
+        >
+          <Text style={[styles.addExSessionBtnText, { color: primaryColor }]}>
+            ➕ Agregar Ejercicio a la Sesión (Catálogo o Libre)
+          </Text>
+        </TouchableOpacity>
+
+        {/* 3. SOLAPA VISIBLE DE RPE DE LA SESIÓN AL FINALIZAR (ESCALA 1 AL 10 - SOLICITADO POR GIAN BOASSO EN AUDIO 1) */}
+        <View style={styles.sessionRpeInlineCard}>
+          <View style={styles.sessionRpeInlineHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.sessionRpeInlineEyebrow}>EVALUACIÓN DEL ENTRENAMIENTO</Text>
+              <Text style={styles.sessionRpeInlineTitle}>🚦 RPE de la Sesión (1 al 10)</Text>
+              <Text style={styles.sessionRpeInlineSub}>
+                ¿Cuán dura te resultó la sesión en general? Tocá el número para calificar tu esfuerzo percibido antes de guardar:
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.sessionRpeBadgePill,
+                {
+                  backgroundColor: getRpeTraffic(selectedSessionRpe).badgeBg,
+                  borderColor: getRpeTraffic(selectedSessionRpe).color,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.sessionRpeBadgePillText,
+                  { color: getRpeTraffic(selectedSessionRpe).textColor },
+                ]}
+              >
+                RPE {selectedSessionRpe}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.sessionRpeChipsGrid}>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
+              const selected = selectedSessionRpe === num;
+              const traffic = getRpeTraffic(num);
+              return (
+                <TouchableOpacity
+                  key={num}
+                  style={[
+                    styles.sessionRpeInlineChip,
+                    { borderColor: traffic.color },
+                    selected && { backgroundColor: traffic.color },
+                  ]}
+                  onPress={() => setSelectedSessionRpe(num)}
+                >
+                  <Text
+                    style={[
+                      styles.sessionRpeInlineChipText,
+                      selected ? { color: '#FFFFFF', fontWeight: '900' } : { color: traffic.textColor },
+                    ]}
+                  >
+                    {num}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View
+            style={[
+              styles.sessionRpeInlineDescRow,
+              { borderColor: getRpeTraffic(selectedSessionRpe).color },
+            ]}
+          >
+            <View
+              style={[
+                styles.semaforoDot,
+                { backgroundColor: getRpeTraffic(selectedSessionRpe).color },
+              ]}
+            />
+            <Text
+              style={[
+                styles.sessionRpeInlineDescText,
+                { color: getRpeTraffic(selectedSessionRpe).textColor },
+              ]}
+            >
+              {getRpeTraffic(selectedSessionRpe).short} · {getRpeTraffic(selectedSessionRpe).desc}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.saveSessionInlineBtn, { backgroundColor: '#10B981' }]}
+            onPress={handleFinish}
+          >
+            <Text style={styles.saveSessionInlineBtnText}>✓ Guardar y Finalizar Sesión</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* Temporizador de Descanso Flotante */}
@@ -2888,5 +3211,218 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     flex: 1,
+  },
+  startFreeWorkoutBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 14,
+    alignSelf: 'flex-start',
+  },
+  startFreeWorkoutBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  emptyCardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  openFreeSessionCardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    marginTop: 14,
+    gap: 12,
+  },
+  openFreeSessionTitle: {
+    color: '#F8FAFC',
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  openFreeSessionSub: {
+    color: '#94A3B8',
+    fontSize: 12,
+  },
+  openFreeSessionBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  openFreeSessionBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  addExSessionBtn: {
+    backgroundColor: '#111827',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    marginVertical: 16,
+  },
+  addExSessionBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  emptyActiveWorkoutBox: {
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+    marginVertical: 12,
+    alignItems: 'center',
+  },
+  emptyActiveWorkoutTitle: {
+    color: '#F8FAFC',
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  emptyActiveWorkoutSub: {
+    color: '#94A3B8',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  sessionRpeInlineCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: '#334155',
+    marginTop: 12,
+    marginBottom: 24,
+  },
+  sessionRpeInlineHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    gap: 10,
+  },
+  sessionRpeInlineEyebrow: {
+    color: '#94A3B8',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  sessionRpeInlineTitle: {
+    color: '#F8FAFC',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+  sessionRpeInlineSub: {
+    color: '#94A3B8',
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  sessionRpeBadgePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  sessionRpeBadgePillText: {
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  sessionRpeChipsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginVertical: 10,
+  },
+  sessionRpeInlineChip: {
+    flex: 1,
+    minWidth: '8.5%',
+    height: 42,
+    borderRadius: 8,
+    backgroundColor: '#131A26',
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sessionRpeInlineChipText: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  sessionRpeInlineDescRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#1E293B',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    marginVertical: 10,
+  },
+  sessionRpeInlineDescText: {
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+  },
+  saveSessionInlineBtn: {
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  saveSessionInlineBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  groupFilterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginRight: 6,
+  },
+  groupFilterChipText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  customAddExBox: {
+    backgroundColor: '#0F172A',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#1E293D',
+    marginTop: 10,
+  },
+  customAddExTitle: {
+    color: '#F8FAFC',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  addCustomBtn: {
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addCustomBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
   },
 });
