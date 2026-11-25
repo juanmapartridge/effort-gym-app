@@ -539,7 +539,7 @@ const ExerciseCard = memo(
 
     const liveBest1RM = exercise.sets.reduce((best, s) => {
       if (!s.completed || s.type !== 'working') return best;
-      const e1rm = calculateEstimated1RM(s.weight, s.reps);
+      const e1rm = calculateEstimated1RM(s.weight, s.reps, s.rir, s.rpe);
       return e1rm > best ? e1rm : best;
     }, 0);
 

@@ -1,5 +1,6 @@
 import {
   calculateEffectiveReps,
+  calculateEpley1RM,
   inferBodyZone,
   inferExerciseTier,
   ExerciseCatalogItem,
@@ -581,6 +582,46 @@ const RAW_SEED_SESSIONS: WorkoutSession[] = [
         ],
         metrics: { totalVolumeKg: 507.5, maxWeightKg: 12.5, estimated1RM: 18.8, averageRpe: 7.7 },
       },
+      {
+        exerciseId: 'ex_militar_manc',
+        exerciseName: 'PRESS MILITAR C/MANCUERNAS',
+        muscleGroup: 'HEMISFERIO SUPERIOR',
+        targetReps: '8-10',
+        targetRpe: 8,
+        restSeconds: 90,
+        sets: [
+          { id: 's11', setNumber: 1, type: 'working', weight: 22.5, reps: 10, rpe: 7.5, completed: true },
+          { id: 's12', setNumber: 2, type: 'working', weight: 25, reps: 9, rpe: 8, completed: true },
+          { id: 's13', setNumber: 3, type: 'working', weight: 25, reps: 8, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 650, maxWeightKg: 25, estimated1RM: 33.3, averageRpe: 8.0 },
+      },
+      {
+        exerciseId: 'ex_curl_biceps',
+        exerciseName: 'CURL BICEPS C/BARRA',
+        muscleGroup: 'HEMISFERIO SUPERIOR',
+        targetReps: '10-12',
+        targetRpe: 8,
+        restSeconds: 60,
+        sets: [
+          { id: 's14', setNumber: 1, type: 'working', weight: 30, reps: 12, rpe: 8, completed: true },
+          { id: 's15', setNumber: 2, type: 'working', weight: 32.5, reps: 10, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 685, maxWeightKg: 32.5, estimated1RM: 44.9, averageRpe: 8.25 },
+      },
+      {
+        exerciseId: 'ex_triceps_polea',
+        exerciseName: 'TRICEPS EN POLEA C/SOGA',
+        muscleGroup: 'HEMISFERIO SUPERIOR',
+        targetReps: '10-12',
+        targetRpe: 8,
+        restSeconds: 60,
+        sets: [
+          { id: 's16', setNumber: 1, type: 'working', weight: 25, reps: 12, rpe: 8, completed: true },
+          { id: 's17', setNumber: 2, type: 'working', weight: 27.5, reps: 10, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 575, maxWeightKg: 27.5, estimated1RM: 38.0, averageRpe: 8.25 },
+      },
     ],
   },
   {
@@ -639,6 +680,46 @@ const RAW_SEED_SESSIONS: WorkoutSession[] = [
           { id: 's9', setNumber: 3, type: 'working', weight: 92.5, reps: 8, rpe: 8.5, completed: true },
         ],
         metrics: { totalVolumeKg: 2457.5, maxWeightKg: 92.5, estimated1RM: 120.3, averageRpe: 8.2 },
+      },
+      {
+        exerciseId: 'ex_032d7308',
+        exerciseName: 'HIP THRUST C/BARRA',
+        muscleGroup: 'HEMISFERIO INFERIOR',
+        targetReps: '10-12',
+        targetRpe: 8.5,
+        restSeconds: 90,
+        sets: [
+          { id: 's10', setNumber: 1, type: 'working', weight: 85, reps: 10, rpe: 8, completed: true },
+          { id: 's11', setNumber: 2, type: 'working', weight: 90, reps: 10, rpe: 8.5, completed: true },
+          { id: 's12', setNumber: 3, type: 'working', weight: 90, reps: 9, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 2560, maxWeightKg: 90, estimated1RM: 124.5, averageRpe: 8.3 },
+      },
+      {
+        exerciseId: 'ex_afa5251a',
+        exerciseName: 'ADUCCION CADERA C/FITBALL',
+        muscleGroup: 'HEMISFERIO INFERIOR',
+        targetReps: '12-15',
+        targetRpe: 8,
+        restSeconds: 60,
+        sets: [
+          { id: 's13', setNumber: 1, type: 'working', weight: 20, reps: 12, rpe: 8, completed: true },
+          { id: 's14', setNumber: 2, type: 'working', weight: 20, reps: 12, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 480, maxWeightKg: 20, estimated1RM: 29.3, averageRpe: 8.25 },
+      },
+      {
+        exerciseId: 'ex_gemelos_barra',
+        exerciseName: 'ELEVACION DE GEMELOS C/BARRA',
+        muscleGroup: 'HEMISFERIO INFERIOR',
+        targetReps: '12-15',
+        targetRpe: 8.5,
+        restSeconds: 60,
+        sets: [
+          { id: 's15', setNumber: 1, type: 'working', weight: 60, reps: 15, rpe: 8, completed: true },
+          { id: 's16', setNumber: 2, type: 'working', weight: 65, reps: 14, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 1810, maxWeightKg: 65, estimated1RM: 98.6, averageRpe: 8.25 },
       },
     ],
   },
@@ -759,6 +840,45 @@ const RAW_SEED_SESSIONS: WorkoutSession[] = [
         ],
         metrics: { totalVolumeKg: 2627.5, maxWeightKg: 100, estimated1RM: 126.7, averageRpe: 8.3 },
       },
+      {
+        exerciseId: 'ex_032d7308',
+        exerciseName: 'HIP THRUST C/BARRA',
+        muscleGroup: 'HEMISFERIO INFERIOR',
+        targetReps: '10-12',
+        targetRpe: 8.5,
+        restSeconds: 90,
+        sets: [
+          { id: 's10', setNumber: 1, type: 'working', weight: 92.5, reps: 10, rpe: 8, completed: true },
+          { id: 's11', setNumber: 2, type: 'working', weight: 97.5, reps: 10, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 1900, maxWeightKg: 97.5, estimated1RM: 134.8, averageRpe: 8.25 },
+      },
+      {
+        exerciseId: 'ex_afa5251a',
+        exerciseName: 'ADUCCION CADERA C/FITBALL',
+        muscleGroup: 'HEMISFERIO INFERIOR',
+        targetReps: '12-15',
+        targetRpe: 8,
+        restSeconds: 60,
+        sets: [
+          { id: 's12', setNumber: 1, type: 'working', weight: 22.5, reps: 12, rpe: 8, completed: true },
+          { id: 's13', setNumber: 2, type: 'working', weight: 25, reps: 12, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 570, maxWeightKg: 25, estimated1RM: 36.2, averageRpe: 8.25 },
+      },
+      {
+        exerciseId: 'ex_gemelos_barra',
+        exerciseName: 'ELEVACION DE GEMELOS C/BARRA',
+        muscleGroup: 'HEMISFERIO INFERIOR',
+        targetReps: '12-15',
+        targetRpe: 8.5,
+        restSeconds: 60,
+        sets: [
+          { id: 's14', setNumber: 1, type: 'working', weight: 65, reps: 15, rpe: 8, completed: true },
+          { id: 's15', setNumber: 2, type: 'working', weight: 67.5, reps: 14, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 1920, maxWeightKg: 67.5, estimated1RM: 102.4, averageRpe: 8.25 },
+      },
     ],
   },
   {
@@ -878,6 +998,45 @@ const RAW_SEED_SESSIONS: WorkoutSession[] = [
           { id: 's10', setNumber: 3, type: 'working', weight: 17.5, reps: 15, rpe: 8.5, completed: true },
         ],
         metrics: { totalVolumeKg: 787.5, maxWeightKg: 17.5, estimated1RM: 26.3, averageRpe: 8.2 },
+      },
+      {
+        exerciseId: 'ex_militar_manc',
+        exerciseName: 'PRESS MILITAR C/MANCUERNAS',
+        muscleGroup: 'HEMISFERIO SUPERIOR',
+        targetReps: '8-10',
+        targetRpe: 8,
+        restSeconds: 90,
+        sets: [
+          { id: 's11', setNumber: 1, type: 'working', weight: 25, reps: 10, rpe: 8, completed: true },
+          { id: 's12', setNumber: 2, type: 'working', weight: 27.5, reps: 8, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 470, maxWeightKg: 27.5, estimated1RM: 36.2, averageRpe: 8.25 },
+      },
+      {
+        exerciseId: 'ex_curl_biceps',
+        exerciseName: 'CURL BICEPS C/BARRA',
+        muscleGroup: 'HEMISFERIO SUPERIOR',
+        targetReps: '10-12',
+        targetRpe: 8.5,
+        restSeconds: 60,
+        sets: [
+          { id: 's13', setNumber: 1, type: 'working', weight: 32.5, reps: 11, rpe: 8, completed: true },
+          { id: 's14', setNumber: 2, type: 'working', weight: 33.5, reps: 10, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 692.5, maxWeightKg: 33.5, estimated1RM: 46.3, averageRpe: 8.25 },
+      },
+      {
+        exerciseId: 'ex_triceps_polea',
+        exerciseName: 'TRICEPS EN POLEA C/SOGA',
+        muscleGroup: 'HEMISFERIO SUPERIOR',
+        targetReps: '10-12',
+        targetRpe: 8.5,
+        restSeconds: 60,
+        sets: [
+          { id: 's15', setNumber: 1, type: 'working', weight: 27.5, reps: 12, rpe: 8, completed: true },
+          { id: 's16', setNumber: 2, type: 'working', weight: 28.5, reps: 11, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 643.5, maxWeightKg: 28.5, estimated1RM: 40.4, averageRpe: 8.25 },
       },
     ],
   },
@@ -1031,6 +1190,148 @@ const RAW_SEED_SESSIONS: WorkoutSession[] = [
         ],
         metrics: { totalVolumeKg: 2720, maxWeightKg: 102.5, estimated1RM: 130.0, averageRpe: 8.3 },
       },
+      {
+        exerciseId: 'ex_032d7308',
+        exerciseName: 'HIP THRUST C/BARRA',
+        muscleGroup: 'HEMISFERIO INFERIOR',
+        targetReps: '10-12',
+        targetRpe: 8.5,
+        restSeconds: 90,
+        sets: [
+          { id: 'sn10', setNumber: 1, type: 'working', weight: 100, reps: 12, rpe: 8, completed: true },
+          { id: 'sn11', setNumber: 2, type: 'working', weight: 105, reps: 10, rpe: 8.5, completed: true },
+          { id: 'sn12', setNumber: 3, type: 'working', weight: 105, reps: 10, rpe: 9, completed: true },
+        ],
+        metrics: { totalVolumeKg: 3300, maxWeightKg: 105, estimated1RM: 143.5, averageRpe: 8.5 },
+      },
+      {
+        exerciseId: 'ex_afa5251a',
+        exerciseName: 'ADUCCION CADERA C/MAQUINA',
+        muscleGroup: 'HEMISFERIO INFERIOR',
+        targetReps: '12-15',
+        targetRpe: 8,
+        restSeconds: 60,
+        sets: [
+          { id: 'sn13', setNumber: 1, type: 'working', weight: 45, reps: 15, rpe: 8, completed: true },
+          { id: 'sn14', setNumber: 2, type: 'working', weight: 50, reps: 12, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 1275, maxWeightKg: 50, estimated1RM: 70.0, averageRpe: 8.25 },
+      },
+      {
+        exerciseId: 'ex_gemelos_barra',
+        exerciseName: 'ELEVACION DE GEMELOS C/BARRA',
+        muscleGroup: 'HEMISFERIO INFERIOR',
+        targetReps: '15-20',
+        targetRpe: 8.5,
+        restSeconds: 60,
+        sets: [
+          { id: 'sn15', setNumber: 1, type: 'working', weight: 65, reps: 15, rpe: 8, completed: true },
+          { id: 'sn16', setNumber: 2, type: 'working', weight: 70, reps: 15, rpe: 8.5, completed: true },
+        ],
+        metrics: { totalVolumeKg: 2025, maxWeightKg: 70, estimated1RM: 108.5, averageRpe: 8.25 },
+      },
+    ],
+  },
+  {
+    id: 'sess_nov_2',
+    gymId: 'gym_effort',
+    userId: 'usr_athlete_1',
+    athleteName: 'Martín Echeverría',
+    userRoutineId: 'urout_martin_effort',
+    dayId: 'day_sup_1',
+    dayName: 'Día 1 - Hemisferio Superior + Brazos & Hombros',
+    startedAt: '2026-11-12T18:00:00Z',
+    completedAt: '2026-11-12T19:05:00Z',
+    durationSeconds: 3900,
+    totalVolumeKg: 6850,
+    totalCompletedSets: 16,
+    averageSessionRpe: 8.3,
+    preWorkoutRecovery: 8,
+    sessionRpe: 8.5,
+    exercises: [
+      {
+        exerciseId: 'ex_c1164817',
+        exerciseName: 'PRESS BANCO PLANO C/BARRA',
+        muscleGroup: 'HEMISFERIO SUPERIOR',
+        targetReps: '6-8',
+        targetRpe: 8.5,
+        restSeconds: 120,
+        sets: [
+          { id: 's201', setNumber: 1, type: 'working', weight: 82.5, reps: 8, rpe: 8, completed: true },
+          { id: 's202', setNumber: 2, type: 'working', weight: 85, reps: 7, rpe: 8.5, completed: true },
+          { id: 's203', setNumber: 3, type: 'working', weight: 85, reps: 6, rpe: 9, completed: true },
+        ],
+        metrics: { totalVolumeKg: 1765, maxWeightKg: 85, estimated1RM: 104.8, averageRpe: 8.5 },
+      },
+      {
+        exerciseId: 'ex_caf8ed4c',
+        exerciseName: 'REMO C/BARRA',
+        muscleGroup: 'HEMISFERIO SUPERIOR',
+        targetReps: '8-10',
+        targetRpe: 8,
+        restSeconds: 90,
+        sets: [
+          { id: 's204', setNumber: 1, type: 'working', weight: 75, reps: 10, rpe: 8, completed: true },
+          { id: 's205', setNumber: 2, type: 'working', weight: 77.5, reps: 9, rpe: 8.5, completed: true },
+          { id: 's206', setNumber: 3, type: 'working', weight: 77.5, reps: 8, rpe: 9, completed: true },
+        ],
+        metrics: { totalVolumeKg: 2067.5, maxWeightKg: 77.5, estimated1RM: 100.7, averageRpe: 8.5 },
+      },
+      {
+        exerciseId: 'ex_militar_manc',
+        exerciseName: 'PRESS MILITAR C/MANCUERNAS',
+        muscleGroup: 'HEMISFERIO SUPERIOR',
+        targetReps: '8-10',
+        targetRpe: 8,
+        restSeconds: 90,
+        sets: [
+          { id: 's207', setNumber: 1, type: 'working', weight: 27.5, reps: 10, rpe: 8, completed: true },
+          { id: 's208', setNumber: 2, type: 'working', weight: 30, reps: 8, rpe: 8.5, completed: true },
+          { id: 's209', setNumber: 3, type: 'working', weight: 30, reps: 8, rpe: 9, completed: true },
+        ],
+        metrics: { totalVolumeKg: 755, maxWeightKg: 30, estimated1RM: 39.5, averageRpe: 8.5 },
+      },
+      {
+        exerciseId: 'ex_curl_biceps',
+        exerciseName: 'CURL BICEPS C/BARRA',
+        muscleGroup: 'HEMISFERIO SUPERIOR',
+        targetReps: '10-12',
+        targetRpe: 8.5,
+        restSeconds: 75,
+        sets: [
+          { id: 's210', setNumber: 1, type: 'working', weight: 32.5, reps: 12, rpe: 8, completed: true },
+          { id: 's211', setNumber: 2, type: 'working', weight: 35, reps: 10, rpe: 8.5, completed: true },
+          { id: 's212', setNumber: 3, type: 'working', weight: 35, reps: 9, rpe: 9, completed: true },
+        ],
+        metrics: { totalVolumeKg: 1055, maxWeightKg: 35, estimated1RM: 46.7, averageRpe: 8.5 },
+      },
+      {
+        exerciseId: 'ex_triceps_polea',
+        exerciseName: 'TRICEPS EN POLEA C/SOGA',
+        muscleGroup: 'HEMISFERIO SUPERIOR',
+        targetReps: '12-15',
+        targetRpe: 8.5,
+        restSeconds: 60,
+        sets: [
+          { id: 's213', setNumber: 1, type: 'working', weight: 27.5, reps: 15, rpe: 8, completed: true },
+          { id: 's214', setNumber: 2, type: 'working', weight: 30, reps: 12, rpe: 8.5, completed: true },
+          { id: 's215', setNumber: 3, type: 'working', weight: 30, reps: 11, rpe: 9, completed: true },
+        ],
+        metrics: { totalVolumeKg: 1102.5, maxWeightKg: 30, estimated1RM: 43.5, averageRpe: 8.5 },
+      },
+      {
+        exerciseId: 'ex_644caa81',
+        exerciseName: 'PALLOF PRESS C/BANDA',
+        muscleGroup: 'ZONA MEDIA',
+        targetReps: '15',
+        targetRpe: 8,
+        restSeconds: 60,
+        sets: [
+          { id: 's216', setNumber: 1, type: 'working', weight: 17.5, reps: 15, rpe: 8, completed: true },
+          { id: 's217', setNumber: 2, type: 'working', weight: 17.5, reps: 15, rpe: 8, completed: true },
+        ],
+        metrics: { totalVolumeKg: 525, maxWeightKg: 17.5, estimated1RM: 26.3, averageRpe: 8.0 },
+      },
     ],
   },
 ];
@@ -1040,6 +1341,7 @@ export const SEED_WORKOUT_SESSIONS: WorkoutSession[] = RAW_SEED_SESSIONS.map((se
     const tier = ex.exerciseTier || inferExerciseTier(ex.exerciseName, ex.muscleGroup);
     const zone = ex.bodyZone || inferBodyZone(ex.muscleGroup);
     let totalEff = 0;
+    let best1RM = 0;
     const sets = ex.sets.map((s) => {
       const rirVal = s.rir !== undefined ? s.rir : Math.max(0, 10 - s.rpe);
       const eff =
@@ -1048,6 +1350,8 @@ export const SEED_WORKOUT_SESSIONS: WorkoutSession[] = RAW_SEED_SESSIONS.map((se
           : calculateEffectiveReps(s.reps, rirVal, s.rpe);
       if (s.completed && s.type === 'working') {
         totalEff += eff;
+        const e1rm = calculateEpley1RM(s.weight, s.reps, rirVal, s.rpe);
+        if (e1rm > best1RM) best1RM = e1rm;
       }
       return {
         ...s,
@@ -1062,6 +1366,7 @@ export const SEED_WORKOUT_SESSIONS: WorkoutSession[] = RAW_SEED_SESSIONS.map((se
       sets,
       metrics: {
         ...ex.metrics,
+        estimated1RM: best1RM > 0 ? best1RM : ex.metrics.estimated1RM,
         totalEffectiveReps: totalEff,
       },
     };

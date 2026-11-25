@@ -118,12 +118,20 @@ interface GymStoreState {
 }
 
 /**
- * Fórmula de Epley para estimar 1RM: Peso * (1 + Reps / 30)
+ * Fórmula de Epley con RIR (Effort Gym):
+ * Carga KG (Utilizados en la serie) x (Repeticiones + RIR) x 0.0333 + Carga KG
  */
-export function calculateEstimated1RM(weight: number, reps: number): number {
+export function calculateEstimated1RM(
+  weight: number,
+  reps: number,
+  rir?: number,
+  rpe?: number
+): number {
   if (weight <= 0 || reps <= 0) return 0;
-  if (reps === 1) return weight;
-  return Math.round(weight * (1 + reps / 30) * 10) / 10;
+  const effectiveRir =
+    rir !== undefined ? Math.max(0, rir) : rpe !== undefined ? Math.max(0, 10 - rpe) : 0;
+  const totalReps = reps + effectiveRir;
+  return Math.round((weight * totalReps * 0.0333 + weight) * 10) / 10;
 }
 
 function computeExerciseMetrics(sets: LoggedSet[]) {
@@ -147,7 +155,7 @@ function computeExerciseMetrics(sets: LoggedSet[]) {
   for (const s of completedWorkingSets) {
     totalVolumeKg += s.weight * s.reps;
     if (s.weight > maxWeightKg) maxWeightKg = s.weight;
-    const e1rm = calculateEstimated1RM(s.weight, s.reps);
+    const e1rm = calculateEstimated1RM(s.weight, s.reps, s.rir, s.rpe);
     if (e1rm > best1RM) best1RM = e1rm;
     rpeSum += s.rpe;
     const eff = s.effectiveReps !== undefined

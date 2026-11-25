@@ -5,6 +5,44 @@ export type SetType = 'warmup' | 'working';
 export type ExerciseTier = 'Básico' | 'Secundario' | 'Auxiliar';
 export type BodyZone = 'HEMISFERIO SUPERIOR' | 'HEMISFERIO INFERIOR' | 'ZONA MEDIA';
 
+export type SpecificMuscleGroup =
+  | 'Cuádriceps'
+  | 'Glúteos'
+  | 'Isquiotibiales'
+  | 'Gemelos'
+  | 'Aductores'
+  | 'Pectorales'
+  | 'Espalda'
+  | 'Hombros'
+  | 'Bíceps'
+  | 'Tríceps';
+
+export const ALL_SPECIFIC_MUSCLE_GROUPS: SpecificMuscleGroup[] = [
+  'Cuádriceps',
+  'Glúteos',
+  'Isquiotibiales',
+  'Gemelos',
+  'Aductores',
+  'Pectorales',
+  'Espalda',
+  'Hombros',
+  'Bíceps',
+  'Tríceps',
+];
+
+export type MovementPattern =
+  | 'Dominante de Rodilla'
+  | 'Dominante de Cadera'
+  | 'Empuje'
+  | 'Tracción';
+
+export const ALL_MOVEMENT_PATTERNS: MovementPattern[] = [
+  'Dominante de Rodilla',
+  'Dominante de Cadera',
+  'Empuje',
+  'Tracción',
+];
+
 export interface GymTenant {
   id: string;
   name: string;
@@ -265,4 +303,215 @@ export function calculatePercentageVariation(
 ): number {
   if (initialValue <= 0) return 0;
   return Math.round(((finalValue - initialValue) / initialValue) * 1000) / 10;
+}
+
+/**
+ * Fórmula Epley con RIR (Effort Gym):
+ * RM = Carga KG (Utilizados en la serie) x (Repeticiones + RIR) x 0.0333 + Carga KG
+ */
+export function calculateEpley1RM(
+  weightKg: number,
+  reps: number,
+  rir?: number,
+  rpe?: number
+): number {
+  if (weightKg <= 0 || reps <= 0) return 0;
+  const effectiveRir =
+    rir !== undefined ? Math.max(0, rir) : rpe !== undefined ? Math.max(0, 10 - rpe) : 0;
+  const totalReps = reps + effectiveRir;
+  return Math.round((weightKg * totalReps * 0.0333 + weightKg) * 10) / 10;
+}
+
+/**
+ * Infiere el grupo muscular específico (10 músculos solicitados por el Profesor Gian Boasso)
+ */
+export function inferSpecificMuscleGroup(
+  exerciseName: string,
+  muscleGroup?: string
+): SpecificMuscleGroup {
+  const n = (exerciseName || '').toUpperCase();
+  const mg = (muscleGroup || '').toUpperCase();
+
+  if (
+    n.includes('GEMELO') ||
+    n.includes('PANTORRILLA') ||
+    n.includes('SOLEO') ||
+    n.includes('CALF') ||
+    n.includes('TALON') ||
+    mg.includes('GEMELO') ||
+    mg.includes('TOBILLO')
+  ) {
+    return 'Gemelos';
+  }
+  if (
+    n.includes('ADUCCION') ||
+    n.includes('ADUCTOR') ||
+    n.includes('COPENHAGUE') ||
+    n.includes('SUMO') ||
+    mg.includes('ADUCTOR')
+  ) {
+    return 'Aductores';
+  }
+  if (
+    n.includes('HIP THRUST') ||
+    n.includes('GLUTEO') ||
+    n.includes('PUENTE') ||
+    n.includes('ABDUCCION') ||
+    n.includes('CLAMSHELL') ||
+    n.includes('MONSTER') ||
+    n.includes('HIP 90') ||
+    mg.includes('GLUTE') ||
+    mg.includes('CADERA')
+  ) {
+    return 'Glúteos';
+  }
+  if (
+    n.includes('PESO MUERTO') ||
+    n.includes('DEADLIFT') ||
+    n.includes('ISQUIO') ||
+    n.includes('FEMORAL') ||
+    n.includes('CAMILLA') ||
+    n.includes('BUENOS DIAS') ||
+    n.includes('GOOD MORNING') ||
+    n.includes('NORDIC') ||
+    n.includes('SWING') ||
+    mg.includes('ISQUIO')
+  ) {
+    return 'Isquiotibiales';
+  }
+  if (
+    n.includes('SQUAT') ||
+    n.includes('SENTADILLA') ||
+    n.includes('CUADRICEPS') ||
+    n.includes('PRENSA') ||
+    n.includes('ESTOCADAS') ||
+    n.includes('BULGARA') ||
+    n.includes('STEP') ||
+    n.includes('ZANCADA') ||
+    n.includes('SILLON') ||
+    n.includes('HACK') ||
+    mg.includes('CUADRICEPS') ||
+    mg.includes('RODILLA') ||
+    mg.includes('INFERIOR') ||
+    mg.includes('PIERNA')
+  ) {
+    return 'Cuádriceps';
+  }
+  if (
+    n.includes('BICEPS') ||
+    n.includes('CURL') ||
+    mg.includes('BICEPS')
+  ) {
+    return 'Bíceps';
+  }
+  if (
+    n.includes('TRICEPS') ||
+    n.includes('FRANCES') ||
+    n.includes('FONDOS') ||
+    n.includes('EXTENSION POLEA') ||
+    n.includes('PATADA DE TRICEPS') ||
+    mg.includes('TRICEPS')
+  ) {
+    return 'Tríceps';
+  }
+  if (
+    n.includes('MILITAR') ||
+    n.includes('VUELO') ||
+    n.includes('LATERAL') ||
+    n.includes('FRONTAL') ||
+    n.includes('HOMBRO') ||
+    n.includes('DELTOIDES') ||
+    n.includes('ARNOLD') ||
+    n.includes('PUSH PRESS') ||
+    n.includes('LANDMINE PRESS') ||
+    n.includes('YTWL') ||
+    mg.includes('HOMBRO')
+  ) {
+    return 'Hombros';
+  }
+  if (
+    n.includes('REMO') ||
+    n.includes('DOMINADA') ||
+    n.includes('DORSAL') ||
+    n.includes('JALON') ||
+    n.includes('PULL') ||
+    n.includes('ESPALDA') ||
+    n.includes('SERRATO') ||
+    mg.includes('ESPALDA') ||
+    mg.includes('TRACCION')
+  ) {
+    return 'Espalda';
+  }
+  if (
+    n.includes('BANCO PLANO') ||
+    n.includes('BANCO INCLINADO') ||
+    n.includes('BANCO DECLINADO') ||
+    n.includes('APERTURA') ||
+    n.includes('PECHO') ||
+    n.includes('PECTORAL') ||
+    n.includes('PUSH UP') ||
+    n.includes('FLEXION') ||
+    n.includes('CHEST') ||
+    n.includes('CRUCE') ||
+    n.includes('PALLOF') ||
+    mg.includes('PECHO') ||
+    mg.includes('SUPERIOR')
+  ) {
+    return 'Pectorales';
+  }
+
+  return 'Pectorales';
+}
+
+/**
+ * Infiere el patrón de movimiento (4 patrones solicitados por el Profesor Gian Boasso:
+ * Dominante de Rodilla, Dominante de Cadera, Empuje, Tracción)
+ */
+export function inferMovementPattern(
+  exerciseName: string,
+  muscleGroup?: string
+): MovementPattern {
+  const muscle = inferSpecificMuscleGroup(exerciseName, muscleGroup);
+  const n = (exerciseName || '').toUpperCase();
+
+  if (
+    muscle === 'Cuádriceps' ||
+    muscle === 'Gemelos' ||
+    n.includes('SQUAT') ||
+    n.includes('SENTADILLA') ||
+    n.includes('ESTOCADAS') ||
+    n.includes('BULGARA') ||
+    n.includes('PRENSA') ||
+    n.includes('STEP')
+  ) {
+    return 'Dominante de Rodilla';
+  }
+
+  if (
+    muscle === 'Glúteos' ||
+    muscle === 'Isquiotibiales' ||
+    muscle === 'Aductores' ||
+    n.includes('PESO MUERTO') ||
+    n.includes('DEADLIFT') ||
+    n.includes('HIP THRUST') ||
+    n.includes('PUENTE') ||
+    n.includes('SWING')
+  ) {
+    return 'Dominante de Cadera';
+  }
+
+  if (
+    muscle === 'Espalda' ||
+    muscle === 'Bíceps' ||
+    n.includes('REMO') ||
+    n.includes('DOMINADA') ||
+    n.includes('DORSAL') ||
+    n.includes('JALON') ||
+    n.includes('CURL') ||
+    n.includes('PULL')
+  ) {
+    return 'Tracción';
+  }
+
+  return 'Empuje';
 }
